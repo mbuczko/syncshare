@@ -1,0 +1,5 @@
+<script>
+var es = new EventSource("/syncshare/sse");
+
+es.onmessage = function(msg) { window.parent.postMessage({reply: msg.data}, "*"); };
+</script>

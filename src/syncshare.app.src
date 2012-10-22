@@ -1,0 +1,13 @@
+{application, syncshare, [
+	{description, "Syncshare example."},
+	{vsn, "1"},
+	{modules, []},
+	{registered, []},
+	{applications, [
+		kernel,
+		stdlib,
+		cowboy
+	]},
+	{mod, {syncshare_app, []}},
+	{env, []}
+]}.
