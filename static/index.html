@@ -6,6 +6,11 @@
     initialising SSE connection...
   </body>
   <script type="text/javascript">
-    new Syncshare.Client('localhost:8080').lookup('twitter');
+    new Syncshare.Client('localhost:8080').lookup('twitter', {secure: true, params: {hash: '#britney'}}).on({
+      message: function(payload) {
+      },
+      hashed: function(payload) {
+      }
+    }).start();
   </script>
 </html>

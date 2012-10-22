@@ -1,18 +1,31 @@
 var Syncshare = Syncshare || {};
 
 Syncshare.Client = function(host) {
-    this.host = host;
-};
-
-Syncshare.Client.prototype.lookup = function(service) {
-    var iframe = document.createElement("iframe");
-    iframe.src = "http://" + this.host + "/syncshare/init?service="+service;
-    iframe.width = iframe.height = '0';
-    document.body.appendChild(iframe);
-
     window.addEventListener("message", function(message) {
         console.log(message.data.reply);
     }, false);
 
+    return {
+        lookup: function(service, options) {
+            return new Syncshare.Service(host, service);
+        }
+    };
+};
+
+
+Syncshare.Service = function(host, service) {
+    this.host = host;
     this.service = service;
+    this.iframe = document.createElement("iframe");
+    this.iframe.width = this.iframe.height = '0';
+
+};
+
+Syncshare.Service.prototype.on = function(events) {
+    return this;
+};
+
+Syncshare.Service.prototype.start = function() {
+    this.iframe.src = "http://" + this.host + "/syncshare/init?service="+this.service;
+    document.body.appendChild(this.iframe);
 };
