@@ -1,11 +1,12 @@
 %% @doc Hello world handler.
 -module(sse_handler).
 
--export([init/3]).
--export([handle/2]).
+-export([init/3, info/3]).
 -export([terminate/2]).
 
 -include_lib("amqp_client/include/amqp_client.hrl").
+
+-define(TIMEOUT, 60000).
 
 %% handler state
 -record(state, {
@@ -17,9 +18,8 @@ init(_Transport, Req, _Opts) ->
     Connection =  proplists:get_value(connection, _Opts),
     Channel =  proplists:get_value(channel, _Opts),
 
-	{ok, Req, #state{amqp_connection=Connection, amqp_channel=Channel}}.
+    io:format("Initializing connection~n"),
 
-handle(Req, #state{amqp_channel=Channel}=State) ->
     {Service, _} = cowboy_req:path_info(Req), 
 
     % create amqp queue
@@ -28,23 +28,19 @@ handle(Req, #state{amqp_channel=Channel}=State) ->
     % bind queue with current process
     syncshare_amqp:listen(Channel, Queue),
 
-    {ok, Req2} = cowboy_req:chunked_reply(200, [{<<"Content-Type">>, <<"text/event-stream">>}], Req),
+	{loop, Req, #state{amqp_connection=Connection, amqp_channel=Channel}, ?TIMEOUT, hibernate}.
 
-    handle_loop(Req2, State).
+info(#'basic.consume_ok'{}=Message, Req, State) ->
+    io:format("~p~n", [Message]),
+	{loop, Req, State, hibernate};
 
-handle_loop(Req, State) -> 
-    receive 
-        shutdown -> 
-            {ok, Req, State};
-        {#'basic.deliver'{delivery_tag = Tag}, Content} ->
-            #amqp_msg{payload = Payload} = Content,
-            Event = ["data: ", Payload, "\n\n"], 
-            ok = cowboy_req:chunk(Event, Req), 
-            handle_loop(Req, State);
-        {event, Message} -> 
-            Event = ["data: ", Message, "\n\n"], 
-            ok = cowboy_req:chunk(Event, Req), 
-            handle_loop(Req, State)
-    end.
+info({#'basic.deliver'{delivery_tag = Tag}, Content} = Message, Req, State) ->
+    #amqp_msg{payload = Payload} = Content,
+    Event = ["data: ", Payload, "\n\n"],
+    
+    {ok, Req2} = cowboy_req:reply(200, [{<<"Content-Type">>, <<"text/event-stream">>}], Event, Req), 
+	{ok, Req2, State}.
 
-terminate(_Req, _State) -> ok.
+terminate(_Req, _State) ->
+    io:format("Terminating...~n"),
+    ok.
