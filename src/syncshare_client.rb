@@ -17,6 +17,6 @@ EventMachine.run do
   #     EventMachine.stop { exit }
   #   }
   # end
-
-  exchange.publish "Hello, world!"
+  ["Hello", "Cruel", "Word"].each {|message| exchange.publish "#{message}"}
+  
 end

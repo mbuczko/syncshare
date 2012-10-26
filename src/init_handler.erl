@@ -16,7 +16,6 @@ handle(Req, State) ->
 	{ok, Req2} = cowboy_req:reply(200, [], io_lib:format("<script>var es=new EventSource('/syncshare/sse/~s'); es.onmessage=function(msg) { window.parent.postMessage({reply: msg.data}, '*'); };</script>", [Val]), Req),
 	{ok, Req2, State}.
 
-
 terminate(_Req, _State) ->
 	ok.
 
