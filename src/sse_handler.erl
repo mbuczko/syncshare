@@ -31,29 +31,31 @@ init({tcp, http}, Req, Opts) ->
 	{loop, Req, #state{amqp_channel=Channel, amqp_queue=Queue}, ?TIMEOUT, hibernate}.
 
 info(#'basic.consume_ok'{consumer_tag=Tag}, Req, State) ->
-    io:format("basic.consume ~p~n", [Tag]),
-	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
-
-info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel, delivery_tag=T}=State) ->
     {ok, Transport, Socket} = cowboy_req:transport(Req),
 
+    {Version, _} = cowboy_req:version(Req),
+    HTTPVer = cowboy_http:version_to_binary(Version),
+    Status = << HTTPVer/binary, " 200 OK\r\n" >>,
+    Type = << "Content-Type: text/event-stream\r\n" >>,
+
+    io:format("basic.consume ~p~n", [Tag]),
+
+    Event = ["event: ack\ndata: ok\n\n"],
+    Transport:send(Socket, [Status, Type, <<"\r\n">>, Event]),
+
+	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
+
+info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
+    {ok, Transport, Socket} = cowboy_req:transport(Req),
     #amqp_msg{payload = Payload} = Content,
 
     % acknowledge incoming message
     syncshare_amqp:ack(Channel, Tag),
 
-    Event = ["data: ", Payload, "\n\n"],
-    case T of
-        undefined -> {Version, _} = cowboy_req:version(Req),
-                     HTTPVer = cowboy_http:version_to_binary(Version),
-                     Status = << HTTPVer/binary, " 200 OK\r\n" >>,
-                     Type = << "Content-Type: text/event-stream\r\n" >>,
-                     Reply = [Status, Type, <<"\r\n">>, Event];
-        T -> Reply = Event
-    end,
+    Event = ["event: msg\ndata: ", Payload, "\n\n"],
+    Transport:send(Socket, Event),
 
-    Transport:send(Socket, Reply),
-    {loop, Req, State#state{delivery_tag=Tag}, hibernate};
+    {loop, Req, State, hibernate};
 
 info(#'basic.cancel_ok'{}, Req, State) ->
     io:format("basic.cancel_ok...~n"),
