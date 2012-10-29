@@ -25,7 +25,11 @@ Syncshare.Service.prototype.on = function(events) {
     return this;
 };
 
+Syncshare.Service.prototype.invoke = function(name, params) {
+    return this;
+};
+
 Syncshare.Service.prototype.start = function() {
-    this.iframe.src = "http://" + this.host + "/syncshare/init?service="+this.service;
+    this.iframe.src = "http://" + this.host + "/syncshare/rpc?service="+this.service;
     document.body.appendChild(this.iframe);
 };

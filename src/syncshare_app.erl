@@ -17,9 +17,9 @@ start(_Type, _Args) ->
 
 	Dispatch = [
 		{'_', [
-			{[<<"syncshare">>, <<"sse">>, '...'], sse_handler, [{connection, Connection},
+			{[<<"syncshare">>, <<"service">>, '...'], sse_handler, [{connection, Connection},
                                                                 {channel, Channel}]},
-			{[<<"syncshare">>, <<"init">>], init_handler, []},
+			{[<<"syncshare">>, <<"rpc">>], rpc_handler, []},
             {[<<"syncshare">>, <<"static">>, '...'], cowboy_static, [{directory, <<"./static">>}, 
                                                                      {mimetypes, [
                                                                                   {<<".css">>, [<<"text/css">>]}, 
