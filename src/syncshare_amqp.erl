@@ -3,10 +3,11 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/2, init_exchanges/2, ack/2]).
+-export([init_queue/2, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
+-include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 init() ->
@@ -18,36 +19,54 @@ init() ->
 init_queue(Channel, Service) ->
     #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{exclusive = true}),
     
-    Binding = #'queue.bind'{queue = Queue, exchange = Service},
-    #'queue.bind_ok'{} = amqp_channel:call(Channel, Binding),
+    % bind to 'public' exchange
+    #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
+
+    % bind to 'private' exchange
+    #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-private">>}),
 
     {ok, Queue}.
 
-init_exchanges(Channel, E) ->
+declare_exchange(Channel, X, Scope) ->
+    {Suffix, Type} = case Scope of
+                       rpc ->     {<<"rpc">>,     <<"topic">> };
+                       public ->  {<<"public">>,  <<"fanout">>};
+                       private -> {<<"private">>, <<"direct">>}
+                   end,
+    amqp_channel:call(Channel, #'exchange.declare'{exchange = <<X/binary, "-", Suffix/binary>>, type = Type}).
+
+declare_exchanges(Channel, E) ->
     lists:foreach(fun(X) ->
-                          declare_public_exchange(Channel, X),
-                          declare_private_exchange(Channel, X)
+                          declare_exchange(Channel, X, rpc),
+                          declare_exchange(Channel, X, public),
+                          declare_exchange(Channel, X, private)
                   end, E).
 
 delete_queue(Channel, Queue) ->
     Delete = #'queue.delete'{queue = Queue},
     #'queue.delete_ok'{} = amqp_channel:call(Channel, Delete).
 
-declare_public_exchange(Channel, X) ->
-    amqp_channel:call(Channel, #'exchange.declare'{exchange = <<X/binary, "/public">>, type = <<"fanout">>}).
-
-declare_private_exchange(Channel, X) ->
-    amqp_channel:call(Channel, #'exchange.declare'{exchange = <<X/binary, "/private">>, type = <<"direct">>}).
-
-listen(Channel, Q) ->
-    Sub = #'basic.consume'{queue = Q},
+listen(Channel, Queue) ->
+    Sub = #'basic.consume'{queue = Queue},
     #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:call(Channel, Sub).
 
-ack(Channel, T) ->
-    amqp_channel:cast(Channel, #'basic.ack'{delivery_tag = T}).
+call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
+    % generate uuid as correlation id
+    Uuid = ossp_uuid:make(v4, text),
+    QName = <<"amq.gen-", Queue/binary>>,
+    Props = #'P_basic'{correlation_id=Uuid, reply_to=QName},
 
-cancel_subscription(Channel, T) ->
-    amqp_channel:call(Channel, #'basic.cancel'{consumer_tag = T}).
+    io:format("Queue=~s  Call=~s  Body=~p~n", [QName, Call, Body]),
+
+    Publish = #'basic.publish'{exchange = <<Service/binary, "-rpc">>, routing_key = Call},
+    amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
+    {ok, Uuid}.
+
+ack(Channel, Tag) ->
+    amqp_channel:cast(Channel, #'basic.ack'{delivery_tag = Tag}).
+
+cancel_subscription(Channel, Tag) ->
+    amqp_channel:call(Channel, #'basic.cancel'{consumer_tag = Tag}).
 
 terminate(Connection, Channel) ->
     amqp_channel:close(Channel),

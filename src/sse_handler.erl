@@ -4,44 +4,39 @@
 -export([init/3, info/3]).
 -export([terminate/2]).
 
+-include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
 -define(TIMEOUT, 60000).
 
-%% handler state
--record(state, {
-          consumer_tag :: any(),
-          delivery_tag :: any(),
-          amqp_channel :: any(),
-          amqp_queue   :: any()}).
-
-
 init({tcp, http}, Req, Opts) ->
     Channel =  proplists:get_value(channel, Opts),
-    {Service, _} = cowboy_req:path_info(Req), 
+    {Service, _} = cowboy_req:binding(service, Req),
 
     io:format("Initializing connection to service: ~p~n", [Service]),
 
     % create amqp queue
-    {ok, Queue} = syncshare_amqp:init_queue(Channel, list_to_binary([Service, "/public"])),
+    {ok, Queue} = syncshare_amqp:init_queue(Channel, Service),
 
     % bind queue with current process
     syncshare_amqp:listen(Channel, Queue),
 
-	{loop, Req, #state{amqp_channel=Channel, amqp_queue=Queue}, ?TIMEOUT, hibernate}.
+	{loop, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}, ?TIMEOUT, hibernate}.
 
-info(#'basic.consume_ok'{consumer_tag=Tag}, Req, State) ->
+info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_queue=Queue}=State) ->
     {ok, Transport, Socket} = cowboy_req:transport(Req),
-
     {Version, _} = cowboy_req:version(Req),
+
     HTTPVer = cowboy_http:version_to_binary(Version),
-    Status = << HTTPVer/binary, " 200 OK\r\n" >>,
-    Type = << "Content-Type: text/event-stream\r\n" >>,
+    Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
+    Type    = << "Content-Type: text/event-stream\r\n" >>,
+    Cookie  = << "Set-Cookie: _syncshare=" >>,
+    Value   = string:sub_string(binary_to_list(Queue), 9),
 
     io:format("basic.consume ~p~n", [Tag]),
 
     Event = ["event: ack\ndata: ok\n\n"],
-    Transport:send(Socket, [Status, Type, <<"\r\n">>, Event]),
+    Transport:send(Socket, [Status, Type, Cookie, Value, <<";path=/syncshare/">>, Service, <<"/rpc/;HttpOnly\r\n\r\n">>, Event]),
 
 	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
 

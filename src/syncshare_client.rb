@@ -2,6 +2,7 @@ require "rubygems"
 
 require 'amqp'
 
+
 EventMachine.run do
   connection = AMQP.connect(:host => '127.0.0.1')
   puts "Connecting to AMQP broker. Running #{AMQP::VERSION} version of the gem..."
@@ -20,3 +21,5 @@ EventMachine.run do
   ["Hello", "Cruel", "Word"].each {|message| exchange.publish "#{message}"}
   
 end
+
+

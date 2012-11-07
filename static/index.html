@@ -6,11 +6,16 @@
     initialising SSE connection...
   </body>
   <script type="text/javascript">
-    new Syncshare.Client('localhost:8080').lookup('twitter', {secure: true, params: {hash: '#britney'}}).on({
+    var service = new Syncshare.Client('localhost:8080').lookup('twitter', {secure: true}).on({
       message: function(payload) {
       },
       hashed: function(payload) {
       }
     }).start();
+
+    setTimeout(function() {
+        service.rpc('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
+    }, 300);
+
   </script>
 </html>

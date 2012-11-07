@@ -12,14 +12,16 @@ start(_Type, _Args) ->
     % init connection to RabbitMQ
     {ok, Connection, Channel} = syncshare_amqp:init(),
 
-    % create exchanges: fanout and direct one for each service
-    syncshare_amqp:init_exchanges(Channel, [<<"twitter">>, <<"rembranto">>]),
+    % create service and RPC exchanges
+    syncshare_amqp:declare_exchanges(Channel, [<<"twitter">>, <<"rembranto">>]),
 
 	Dispatch = [
 		{'_', [
-			{[<<"syncshare">>, <<"service">>, '...'], sse_handler, [{connection, Connection},
-                                                                {channel, Channel}]},
-			{[<<"syncshare">>, <<"rpc">>], rpc_handler, []},
+			{[<<"syncshare">>, service], sse_handler, [{channel, Channel}]},
+			{[<<"syncshare">>, service, <<"init">>], ini_handler, [{channel, Channel}]},
+			{[<<"syncshare">>, service, <<"rpc">>, message], rpc_handler, [{channel, Channel}]},
+
+            % TODO: remove in production.
             {[<<"syncshare">>, <<"static">>, '...'], cowboy_static, [{directory, <<"./static">>}, 
                                                                      {mimetypes, [
                                                                                   {<<".css">>, [<<"text/css">>]}, 
