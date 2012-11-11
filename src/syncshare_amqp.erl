@@ -22,24 +22,22 @@ init_queue(Channel, Service) ->
     % bind to 'public' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
 
-    % bind to 'private' exchange
-    #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-private">>}),
+    % bind to 'direct / rpc' exchange
+    #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-direct">>,  routing_key = Queue}),
 
     {ok, Queue}.
 
 declare_exchange(Channel, X, Scope) ->
     {Suffix, Type} = case Scope of
-                       rpc ->     {<<"rpc">>,     <<"topic">> };
-                       public ->  {<<"public">>,  <<"fanout">>};
-                       private -> {<<"private">>, <<"direct">>}
+                       public -> {<<"public">>, <<"fanout">>};
+                       direct -> {<<"direct">>, <<"topic">>}
                    end,
     amqp_channel:call(Channel, #'exchange.declare'{exchange = <<X/binary, "-", Suffix/binary>>, type = Type}).
 
 declare_exchanges(Channel, E) ->
     lists:foreach(fun(X) ->
-                          declare_exchange(Channel, X, rpc),
                           declare_exchange(Channel, X, public),
-                          declare_exchange(Channel, X, private)
+                          declare_exchange(Channel, X, direct)
                   end, E).
 
 delete_queue(Channel, Queue) ->
@@ -58,7 +56,7 @@ call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
 
     io:format("Queue=~s  Call=~s  Body=~p~n", [QName, Call, Body]),
 
-    Publish = #'basic.publish'{exchange = <<Service/binary, "-rpc">>, routing_key = Call},
+    Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = <<"rpc.", Call/binary>>},
     amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
     {ok, Uuid}.
 

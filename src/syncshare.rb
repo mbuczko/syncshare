@@ -10,13 +10,11 @@ module Syncshare
       def register(params)
         instance = self.new
         options  = {
-          :host    => "localhost",
-          :public  => [],
-          :private => [],
-          :rpc     => []
+          :host     => "localhost",
+          :messages => []
         }
 
-        [:service, :host, :rpc].each do |key|
+        [:service, :host, :messages].each do |key|
           options[key] = params[key] if params.include? (key)
         end
 
@@ -41,29 +39,29 @@ module Syncshare
         @connection = AMQP.connect(:host => @options[:host])
         @channel  = AMQP::Channel.new(@connection)
 
+        @exchange_public  = @channel.fanout(@service + "-public")
+
         puts "Connecting to AMQP broker. Running #{AMQP::VERSION} version of the gem..."
 
-        if options[:public].length > 0
-          exchange_public  = @channel.fanout(@service + "-public")
-        end
+        if options[:messages].length > 0
+          @exchange_direct  = @channel.topic(@service + "-direct")
 
-        if options[:private].length > 0
-          exchange_private  = @channel.direct(@service + "-private")
-        end
-
-        if options[:rpc].length > 0
-          exchange_rpc = @channel.topic(@service + "-rpc")
-
-          options[:rpc].each do |message|
-            @channel.queue(@service + "." + message).bind(exchange_rpc, :routing_key => message).subscribe do |key, payload|
-              proc = 'rpc_'+key.routing_key
-              if self.class.method_defined? proc
-                send(proc, JSON.parse(payload))
-              end
+          options[:messages].each do |message|
+            @channel.queue("rpc." + message).bind(@exchange_direct, :routing_key => "rpc."+message).subscribe do |header, payload|
+              proc = header.routing_key.sub('.', '_')
+              send(proc, JSON.parse(payload), header) if self.class.method_defined? proc
             end
           end
         end        
       end
+    end
+
+    def reply(payload, header)
+      @exchange_direct.publish(payload, :routing_key => header.reply_to, :correlation_id => header.correlation_id)
+    end
+
+    def reply_all(payload)
+      @exchange_public.publish(payload)
     end
 
   end

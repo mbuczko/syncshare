@@ -5,12 +5,15 @@ class Twitter < Syncshare::Module
 
   # remote procedures
 
-  def rpc_observe(payload)
-    puts "Got an RPC call: #{payload}, routing key is 'observe'"
+  def rpc_observe(payload, header)
+    reply({
+            :ack => true,
+            :dupa => "jasia"
+          }, header)
   end
 
   
 end
 
-Twitter.register(:service => "twitter", :rpc => ["observe"]).activate
+Twitter.register(:service => "twitter", :messages => ["observe"]).activate
   
