@@ -6,7 +6,7 @@ class Twitter < Syncshare::Module
   # remote procedures
 
   def rpc_observe(payload, header)
-    reply({
+    reply_all({
             :ack => true,
             :dupa => "jasia"
           }, header)

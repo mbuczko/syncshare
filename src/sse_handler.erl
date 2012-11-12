@@ -12,16 +12,16 @@
 init({tcp, http}, Req, Opts) ->
     Channel =  proplists:get_value(channel, Opts),
     {Service, _} = cowboy_req:binding(service, Req),
+    {Timeout, Req2} = cowboy_req:qs_val(<<"timeout">>, Req, ?TIMEOUT),
 
-    io:format("Initializing connection to service: ~p~n", [Service]),
+    io:format("Initializing connection to service: '~s' with timeout=~p~n", [Service, Timeout]),
 
     % create amqp queue
     {ok, Queue} = syncshare_amqp:init_queue(Channel, Service),
-
     % bind queue with current process
     syncshare_amqp:listen(Channel, Queue),
 
-	{loop, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}, ?TIMEOUT, hibernate}.
+	{loop, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}, Timeout, hibernate}.
 
 info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_queue=Queue}=State) ->
     {ok, Transport, Socket} = cowboy_req:transport(Req),
@@ -42,12 +42,17 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_qu
 
 info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
     {ok, Transport, Socket} = cowboy_req:transport(Req),
-    #amqp_msg{payload = Payload} = Content,
+
+    #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, priority = Priority}} = Content,
 
     % acknowledge incoming message
     syncshare_amqp:ack(Channel, Tag),
 
-    Event = ["event: msg\ndata: ", Payload, "\n\n"],
+
+    % get type of message (rpc/public)
+    {ok, Type} = get_header(<<"type">>, Headers, <<"public">>),
+
+    Event = ["event: ", Type, "\ndata: ", Payload, "\n\n"],
     Transport:send(Socket, Event),
 
     {loop, Req, State, hibernate};
@@ -71,3 +76,9 @@ terminate(_Req, #state{amqp_channel=Channel, amqp_queue=Queue, consumer_tag=Tag}
     syncshare_amqp:cancel_subscription(Channel, Tag),
     syncshare_amqp:delete_queue(Channel, Queue),
     ok.
+
+get_header(Name, Headers, Default) ->
+	case lists:keyfind(Name, 1, Headers) of
+		false -> { ok, Default };
+		{Name, _, Value} -> {ok, Value}
+    end.

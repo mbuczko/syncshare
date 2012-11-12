@@ -45,22 +45,30 @@ Syncshare.Proxy = function(window, undefined) {
         return this;
     };
 
+    var msg = function(message) {
+        window.parent.postMessage(message, '*');
+    };
+
     var init = function(service) {
-console.log('listening to service '+service);
         var es = new EventSource('/syncshare/'+service);
+
+        es.addEventListener('error', function(e) {
+            if (e.readyState == EventSource.CLOSED) {
+                console.log('syncshare: connection closed');
+            }
+        }, false);
 
         // bubble message up to parent window
 
-        es.addEventListener('msg',function(msg) {
-            window.parent.postMessage({reply: msg.data}, '*');
-        });
+        es.addEventListener('rpc',function(reply)    { msg({rpc: reply.data}); });
+        es.addEventListener('public',function(reply) { msg({broadcast: reply.data}); });
 
         // delegate RPC messages to rpc queue
 
         window.addEventListener('message', function(e) {
             this.req = this.req || new xhr();
             this.req.connect('/syncshare/'+ e.data.service + '/rpc/'+e.data.call, e.data.params, function() {
-
+                console.log('syncshare: successfully pushed event to /rpc/'+e.data.call);
             });
         }, false);
     };

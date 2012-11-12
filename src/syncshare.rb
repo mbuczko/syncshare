@@ -57,11 +57,19 @@ module Syncshare
     end
 
     def reply(payload, header)
-      @exchange_direct.publish(payload, :routing_key => header.reply_to, :correlation_id => header.correlation_id)
+      @exchange_direct.publish(payload.to_json,
+                               :routing_key => header.reply_to,
+                               :correlation_id => header.correlation_id,
+                               :headers => {
+                                 :type => 'rpc'
+                               })
     end
 
-    def reply_all(payload)
-      @exchange_public.publish(payload)
+    def reply_all(payload, header)
+      @exchange_public.publish(payload.to_json,
+                               :headers => {
+                                 :type => 'public'
+                               })
     end
 
   end

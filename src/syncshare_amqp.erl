@@ -54,8 +54,6 @@ call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
     QName = <<"amq.gen-", Queue/binary>>,
     Props = #'P_basic'{correlation_id=Uuid, reply_to=QName},
 
-    io:format("Queue=~s  Call=~s  Body=~p~n", [QName, Call, Body]),
-
     Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = <<"rpc.", Call/binary>>},
     amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
     {ok, Uuid}.
