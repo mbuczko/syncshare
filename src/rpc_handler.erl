@@ -18,8 +18,6 @@ handle(Req, {amqp_channel, Channel}=State) ->
     {Cookie, Req2} = cowboy_req:cookie(<<"_syncshare">>, Req),
     {ok, [{<<"body">>, Body}], Req3} = cowboy_req:body_qs(Req2),
 
-    io:format("-> Call [queue=~p]: ~s ~p~n", [Cookie, Call, Body]),
-
     syncshare_amqp:call(Channel, Cookie, #payload{service=Service, call=Call, body=Body}),
 
     {ok, Req4} = cowboy_req:reply(200, [], <<"ok">>, Req3),

@@ -3,7 +3,7 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/2, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
+-export([init_queue/3, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
@@ -16,8 +16,8 @@ init() ->
 	{ok, Channel} = amqp_connection:open_channel(Connection),
     {ok, Connection, Channel}.
 
-init_queue(Channel, Service) ->
-    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{exclusive = true}),
+init_queue(Channel, Service, Timeout) ->
+    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{arguments = [{<<"x-expires">>, long, Timeout}]}),
     
     % bind to 'public' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
@@ -46,7 +46,8 @@ delete_queue(Channel, Queue) ->
 
 listen(Channel, Queue) ->
     Sub = #'basic.consume'{queue = Queue},
-    #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:call(Channel, Sub).
+    #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:call(Channel, Sub),
+    {ok, Queue}.
 
 call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
     % generate uuid as correlation id
@@ -54,7 +55,7 @@ call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
     QName = <<"amq.gen-", Queue/binary>>,
     Props = #'P_basic'{correlation_id=Uuid, reply_to=QName},
 
-    Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = <<"rpc.", Call/binary>>},
+    Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = Call},
     amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
     {ok, Uuid}.
 

@@ -52,22 +52,21 @@ Syncshare.Proxy = function(window, undefined) {
     var init = function(service) {
         var es = new EventSource('/syncshare/'+service);
 
-        es.addEventListener('error', function(e) {
-            if (e.readyState == EventSource.CLOSED) {
-                console.log('syncshare: connection closed');
-            }
-        }, false);
-
         // bubble message up to parent window
 
-        es.addEventListener('rpc',function(reply)    { msg({rpc: reply.data}); });
-        es.addEventListener('public',function(reply) { msg({broadcast: reply.data}); });
+        es.addEventListener('rpc', function(reply)       { msg({rpc: reply.data}); });
+        es.addEventListener('public', function(reply)    { msg({broadcast: reply.data}); });
+        es.addEventListener('connected', function(reply) { Syncshare.queue = reply.data; });
 
         // delegate RPC messages to rpc queue
 
         window.addEventListener('message', function(e) {
+            var url = '/syncshare/' + e.data.service + '/rpc/' + e.data.call;
+
+            console.log('syncshare: RPC call to: '+url);
+
             this.req = this.req || new xhr();
-            this.req.connect('/syncshare/'+ e.data.service + '/rpc/'+e.data.call, e.data.params, function() {
+            this.req.connect(url, e.data.params, function() {
                 console.log('syncshare: successfully pushed event to /rpc/'+e.data.call);
             });
         }, false);
