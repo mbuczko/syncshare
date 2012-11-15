@@ -1,14 +1,6 @@
 var Syncshare = Syncshare || {};
 
 Syncshare.Client = function(host) {
-    window.addEventListener('message', function(reply) {
-        if (reply.data.rpc) {
-            console.log('syncshare: got rpc response: ', reply.data.rpc);
-        } else {
-            console.log('syncshare: got public push: ', reply.data.broadcast);
-        }
-    }, false);
-
     return {
         lookup: function(service, options) {
             return new Syncshare.Service(host, service, options || {});
@@ -23,9 +15,21 @@ Syncshare.Service = function(host, service, options) {
     this.iframe = document.createElement('iframe');
     this.iframe.width = this.iframe.height = '0';
 
+    var self = this;
+
+    window.addEventListener('message', function(reply) {
+        var data = reply.data, rpc = data.rpc, broadcast = data.broadcast, handlers = self.handlers;
+        if (rpc && handlers.rpc) {
+            handlers.rpc.call(this, rpc);
+        } else
+        if (broadcast && handlers.broadcast) {
+            handlers.broadcast.call(this, broadcast);
+        }
+    }, false);
 };
 
-Syncshare.Service.prototype.on = function(events) {
+Syncshare.Service.prototype.on = function(handlers) {
+    this.handlers = handlers || {};
     return this;
 };
 

@@ -6,12 +6,12 @@
 -export([terminate/2]).
 
 
-init(_Transport, Req, Opts) ->
+init(_Transport, Req, _Opts) ->
 	{ok, Req, undefined_state}.
 
 handle(Req, State) ->
     {Service, _} = cowboy_req:binding(service, Req),
-	{ok, Req2} = cowboy_req:reply(200, [], io_lib:format("<script>
+	{ok, Req2} = cowboy_req:reply(200, [{<<"Set-Cookie">>, <<"_syncshare=;path=/syncshare/", Service/binary, ";HttpOnly">>}], io_lib:format("<script>
 
 var Syncshare = Syncshare || {};
 Syncshare.Proxy = function(window, undefined) {
@@ -35,7 +35,7 @@ Syncshare.Proxy = function(window, undefined) {
                 xhr.onreadystatechange = function() {
                     if (xhr.readyState == 4 && !completed) {
                         completed = true;
-                        callback(xhr);
+                        if (callback) callback(xhr);
                     }};
                 xhr.send('body='+escape(params));
             }
@@ -54,21 +54,16 @@ Syncshare.Proxy = function(window, undefined) {
 
         // bubble message up to parent window
 
-        es.addEventListener('rpc', function(reply)       { msg({rpc: reply.data}); });
-        es.addEventListener('public', function(reply)    { msg({broadcast: reply.data}); });
-        es.addEventListener('connected', function(reply) { Syncshare.queue = reply.data; });
+        es.addEventListener('rpc', function(reply)        { msg({rpc: reply.data}); });
+        es.addEventListener('broadcast', function(reply)  { msg({broadcast: reply.data}); });
+        es.addEventListener('connection', function(reply) { });
 
         // delegate RPC messages to rpc queue
 
         window.addEventListener('message', function(e) {
             var url = '/syncshare/' + e.data.service + '/rpc/' + e.data.call;
-
-            console.log('syncshare: RPC call to: '+url);
-
             this.req = this.req || new xhr();
-            this.req.connect(url, e.data.params, function() {
-                console.log('syncshare: successfully pushed event to /rpc/'+e.data.call);
-            });
+            this.req.connect(url, e.data.params);
         }, false);
     };
     init('~s');

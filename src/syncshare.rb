@@ -23,7 +23,6 @@ module Syncshare
       end
 
       def handlers(*calls)
-        puts "been here"
         calls.each do |call|
           if superclass.responds_to(call)
             handle(call.to_s)
@@ -68,7 +67,7 @@ module Syncshare
     def reply_all(payload, header)
       @exchange_public.publish(payload.to_json,
                                :headers => {
-                                 :type => 'public'
+                                 :type => 'broadcast'
                                })
     end
 

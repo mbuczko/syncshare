@@ -17,11 +17,7 @@ init() ->
     {ok, Connection, Channel}.
 
 init_queue(Name, Channel, Service, Timeout) ->
-    random:seed(erlang:now()),
-    Q = case Name of
-            undefined -> list_to_binary(random_string(32));
-            _ -> Name
-        end,
+    Q = queue_name(Name),
 
     #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = [{<<"x-expires">>, long, Timeout}]}),
     
@@ -75,6 +71,14 @@ terminate(Connection, Channel) ->
     amqp_channel:close(Channel),
     amqp_connection:close(Connection),
 	ok.
+
+queue_name(<<>>) -> queue_name();
+queue_name(undefined) -> queue_name();
+queue_name(Name) -> Name.
+
+queue_name() ->
+    random:seed(erlang:now()),
+    list_to_binary(["gen-", random_string(16)]).
 
 random_string(Len) ->
     Chrs = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
