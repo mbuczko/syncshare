@@ -3,7 +3,7 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/3, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
+-export([init_queue/4, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
@@ -16,8 +16,14 @@ init() ->
 	{ok, Channel} = amqp_connection:open_channel(Connection),
     {ok, Connection, Channel}.
 
-init_queue(Channel, Service, Timeout) ->
-    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{arguments = [{<<"x-expires">>, long, Timeout}]}),
+init_queue(Name, Channel, Service, Timeout) ->
+    random:seed(erlang:now()),
+    Q = case Name of
+            undefined -> list_to_binary(random_string(32));
+            _ -> Name
+        end,
+
+    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = [{<<"x-expires">>, long, Timeout}]}),
     
     % bind to 'public' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
@@ -46,14 +52,14 @@ delete_queue(Channel, Queue) ->
 
 listen(Channel, Queue) ->
     Sub = #'basic.consume'{queue = Queue},
-    #'basic.consume_ok'{consumer_tag = Tag} = amqp_channel:call(Channel, Sub),
-    {ok, Queue}.
+    #'basic.consume_ok'{} = amqp_channel:call(Channel, Sub).
 
 call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
     % generate uuid as correlation id
     Uuid = ossp_uuid:make(v4, text),
-    QName = <<"amq.gen-", Queue/binary>>,
-    Props = #'P_basic'{correlation_id=Uuid, reply_to=QName},
+    Props = #'P_basic'{correlation_id=Uuid, reply_to=Queue},
+
+    io:format("got RPC call. queue ~p~n", [Queue]),
 
     Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = Call},
     amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
@@ -70,3 +76,7 @@ terminate(Connection, Channel) ->
     amqp_connection:close(Connection),
 	ok.
 
+random_string(Len) ->
+    Chrs = list_to_tuple("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"),
+    F = fun(_, R) -> [element(random:uniform(size(Chrs)), Chrs) | R] end,
+    lists:foldl(F, "", lists:seq(1, Len)).
