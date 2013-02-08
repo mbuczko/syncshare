@@ -1,50 +1,82 @@
 %% @doc Hello world handler.
 -module(sse_handler).
 
--export([init/3]).
--export([handle/2]).
+-export([init/3, info/3]).
 -export([terminate/2]).
 
+-include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
-%% handler state
--record(state, {
-	amqp_connection :: binary(),
-	amqp_channel :: binary() }).
+-define(TIMEOUT, 60000).
 
+init({tcp, http}, Req, Opts) ->
+    Channel =  proplists:get_value(channel, Opts),
 
-init(_Transport, Req, _Opts) ->
-    Connection =  proplists:get_value(connection, _Opts),
-    Channel =  proplists:get_value(channel, _Opts),
+    {Service, _} = cowboy_req:binding(service, Req),
+    {Timeout, _} = cowboy_req:qs_val(<<"timeout">>, Req, ?TIMEOUT),
+    {Cookie,  _} = cowboy_req:cookie(<<"_syncshare">>, Req),
 
-	{ok, Req, #state{amqp_connection=Connection, amqp_channel=Channel}}.
+    {ok, Queue} = syncshare_amqp:init_queue(Cookie, Channel, Service, Timeout*2),
 
-handle(Req, #state{amqp_channel=Channel}=State) ->
-    {Service, _} = cowboy_req:path_info(Req), 
+    io:format("Initializing connection to service: '~s' with queue=~p~n", [Service, Queue]),
 
-    % create amqp queue
-    {ok, Queue} = syncshare_amqp:init_queue(Channel, list_to_binary([Service, "/public"])),
-
-    % bind queue with current process
     syncshare_amqp:listen(Channel, Queue),
+    {loop, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}, Timeout, hibernate}.
 
-    {ok, Req2} = cowboy_req:chunked_reply(200, [{<<"Content-Type">>, <<"text/event-stream">>}], Req),
 
-    handle_loop(Req2, State).
+info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_queue=Queue}=State) ->
+    {ok, Transport, Socket} = cowboy_req:transport(Req),
+    {Version, _} = cowboy_req:version(Req),
 
-handle_loop(Req, State) -> 
-    receive 
-        shutdown -> 
-            {ok, Req, State};
-        {#'basic.deliver'{delivery_tag = Tag}, Content} ->
-            #amqp_msg{payload = Payload} = Content,
-            Event = ["data: ", Payload, "\n\n"], 
-            ok = cowboy_req:chunk(Event, Req), 
-            handle_loop(Req, State);
-        {event, Message} -> 
-            Event = ["data: ", Message, "\n\n"], 
-            ok = cowboy_req:chunk(Event, Req), 
-            handle_loop(Req, State)
+    HTTPVer = cowboy_http:version_to_binary(Version),
+    Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
+    Type    = << "Content-Type: text/event-stream\r\nConnection: Keep-Alive\r\nCache-Control: no-cache\r\n" >>,
+    Cookie  = << "Set-Cookie: _syncshare=", Queue/binary, ";path=/syncshare/", Service/binary, ";HttpOnly\r\n" >>,
+
+    io:format("basic.consume ~p~n", [Tag]),
+
+    Event = ["event: connection\ndata: ok\n\n"],
+    Transport:send(Socket, [Status, Type, Cookie, <<"\r\n">>, Event]),
+
+	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
+
+info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
+    {ok, Transport, Socket} = cowboy_req:transport(Req),
+
+    #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, priority = _Priority}} = Content,
+
+    % acknowledge incoming message
+    syncshare_amqp:ack(Channel, Tag),
+
+    % get type of message (rpc/public)
+    {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
+
+    Event = ["event: ", Type, "\ndata: ", Payload, "\n\n"],
+    Transport:send(Socket, Event),
+
+    io:format("basic.deliver (~s)~n", [Type]),
+
+    {loop, Req, State, hibernate};
+
+info(#'basic.cancel_ok'{}, Req, State) ->
+    io:format("basic.cancel_ok...~n"),
+	{loop, Req, State, hibernate};
+
+info(#'basic.cancel'{}, Req, State) ->
+    io:format("basic.cancel...~n"),
+	{loop, Req, State, hibernate};
+
+info(_Message, Req, State) ->
+	{loop, Req, State, hibernate}.
+
+
+terminate(_Req, #state{amqp_channel=Channel, consumer_tag=Tag}=_State) ->
+    io:format("Terminating with tag: ~p...~n", [Tag]),
+    syncshare_amqp:cancel_subscription(Channel, Tag),
+    ok.
+
+get_header(Name, Headers, Default) ->
+	case lists:keyfind(Name, 1, Headers) of
+		false -> { ok, Default };
+		{Name, _, Value} -> {ok, Value}
     end.
-
-terminate(_Req, _State) -> ok.
