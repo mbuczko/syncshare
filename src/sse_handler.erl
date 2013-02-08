@@ -1,8 +1,8 @@
-%% @doc Hello world handler.
 -module(sse_handler).
+-behaviour(cowboy_loop_handler).
 
 -export([init/3, info/3]).
--export([terminate/2]).
+-export([terminate/3]).
 
 -include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
@@ -11,7 +11,6 @@
 
 init({tcp, http}, Req, Opts) ->
     Channel =  proplists:get_value(channel, Opts),
-
     {Service, _} = cowboy_req:binding(service, Req),
     {Timeout, _} = cowboy_req:qs_val(<<"timeout">>, Req, ?TIMEOUT),
     {Cookie,  _} = cowboy_req:cookie(<<"_syncshare">>, Req),
@@ -25,10 +24,10 @@ init({tcp, http}, Req, Opts) ->
 
 
 info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_queue=Queue}=State) ->
-    {ok, Transport, Socket} = cowboy_req:transport(Req),
-    {Version, _} = cowboy_req:version(Req),
+    [Socket, Transport] = cowboy_req:get([socket, transport], Req),
+	{Version, _} = cowboy_req:version(Req),
 
-    HTTPVer = cowboy_http:version_to_binary(Version),
+	HTTPVer = cowboy_http:version_to_binary(Version),
     Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
     Type    = << "Content-Type: text/event-stream\r\nConnection: Keep-Alive\r\nCache-Control: no-cache\r\n" >>,
     Cookie  = << "Set-Cookie: _syncshare=", Queue/binary, ";path=/syncshare/", Service/binary, ";HttpOnly\r\n" >>,
@@ -41,7 +40,7 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_qu
 	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
 
 info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
-    {ok, Transport, Socket} = cowboy_req:transport(Req),
+	[Socket, Transport] = cowboy_req:get([socket, transport], Req),
 
     #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, priority = _Priority}} = Content,
 
@@ -70,7 +69,7 @@ info(_Message, Req, State) ->
 	{loop, Req, State, hibernate}.
 
 
-terminate(_Req, #state{amqp_channel=Channel, consumer_tag=Tag}=_State) ->
+terminate(_Reason, _Req, #state{amqp_channel=Channel, consumer_tag=Tag}=_State) ->
     io:format("Terminating with tag: ~p...~n", [Tag]),
     syncshare_amqp:cancel_subscription(Channel, Tag),
     ok.

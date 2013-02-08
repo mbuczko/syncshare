@@ -15,23 +15,23 @@ start(_Type, _Args) ->
     % create service and RPC exchanges
     syncshare_amqp:declare_exchanges(Channel, [<<"twitter">>, <<"rembranto">>]),
 
-	Dispatch = [
+	Dispatch = cowboy_router:compile([
 		{'_', [
-			{[<<"syncshare">>, service], sse_handler, [{channel, Channel}]},
-			{[<<"syncshare">>, service, <<"init">>], ini_handler, [{channel, Channel}]},
-			{[<<"syncshare">>, service, <<"rpc">>, message], rpc_handler, [{channel, Channel}]},
+			{"/syncshare/:service", sse_handler, [{channel, Channel}]},
+			{"/syncshare/:service/init", ini_handler, [{channel, Channel}]},
+			{"/syncshare/:service/rpc/:message", rpc_handler, [{channel, Channel}]},
 
             % TODO: remove in production.
-            {[<<"syncshare">>, <<"static">>, '...'], cowboy_static, [{directory, <<"./static">>}, 
-                                                                     {mimetypes, [
-                                                                                  {<<".css">>, [<<"text/css">>]}, 
-                                                                                  {<<".html">>, [<<"text/html">>]},
-                                                                                  {<<".js">>, [<<"application/javascript">>]}
-                                                                                 ]}]}
+            {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
+												 {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
+%			{"/init", init_handler, []},
+%			{"/sse/[...]", sse_handler, [{connection, Connection}, {channel, Channel}]},
+%            {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
+%									   {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
 		]}
-	],
+	]),
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
-		{dispatch, Dispatch}
+		{env, [{dispatch, Dispatch}]}
 	]),
 	syncshare_sup:start_link().
 

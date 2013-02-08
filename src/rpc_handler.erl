@@ -3,7 +3,7 @@
 
 -export([init/3]).
 -export([handle/2]).
--export([terminate/2]).
+-export([terminate/3]).
 
 -include_lib("include/syncshare.hrl").
 
@@ -23,6 +23,6 @@ handle(Req, {amqp_channel, Channel}=State) ->
     {ok, Req4} = cowboy_req:reply(200, [], <<"ok">>, Req3),
     {ok, Req4, State}.
 
-terminate(_Req, _State) ->
+terminate(_Reason, _Req, _State) ->
 	ok.
 
