@@ -14,8 +14,8 @@
 
 
 init(_Transport, Req, _Opts) ->
-    Connection =  proplists:get_value(connection, _Opts),
-    Channel =  proplists:get_value(channel, _Opts),
+    Connection = proplists:get_value(connection, _Opts),
+    Channel = proplists:get_value(channel, _Opts),
 
 	{ok, Req, #state{amqp_connection=Connection, amqp_channel=Channel}}.
 

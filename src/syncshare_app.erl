@@ -15,21 +15,16 @@ start(_Type, _Args) ->
     % create exchanges: fanout and direct one for each service
     syncshare_amqp:init_exchanges(Channel, [<<"twitter">>, <<"rembranto">>]),
 
-	Dispatch = [
+	Dispatch = cowboy_router:compile([
 		{'_', [
-			{[<<"syncshare">>, <<"sse">>, '...'], sse_handler, [{connection, Connection},
-                                                                {channel, Channel}]},
-			{[<<"syncshare">>, <<"init">>], init_handler, []},
-            {[<<"syncshare">>, <<"static">>, '...'], cowboy_static, [{directory, <<"./static">>}, 
-                                                                     {mimetypes, [
-                                                                                  {<<".css">>, [<<"text/css">>]}, 
-                                                                                  {<<".html">>, [<<"text/html">>]},
-                                                                                  {<<".js">>, [<<"application/javascript">>]}
-                                                                                 ]}]}
+			{"/init", init_handler, []},
+			{"/sse/[...]", sse_handler, [{connection, Connection}, {channel, Channel}]},
+            {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
+									   {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
 		]}
-	],
+	]),
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
-		{dispatch, Dispatch}
+		{env, [{dispatch, Dispatch}]}
 	]),
 	syncshare_sup:start_link().
 
