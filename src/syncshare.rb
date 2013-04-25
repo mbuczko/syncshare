@@ -46,8 +46,8 @@ module Syncshare
           @exchange_direct  = @channel.topic(@service + "-direct")
 
           options[:messages].each do |message|
-            @channel.queue(@service + ".rpc-" + message).bind(@exchange_direct, :routing_key => message).subscribe do |header, payload|
-              proc = "rpc_"+header.routing_key
+            @channel.queue(@service + ".direct-" + message).bind(@exchange_direct, :routing_key => message).subscribe do |header, payload|
+              proc = "direct_"+header.routing_key
               send(proc, JSON.parse(payload), header) if self.class.method_defined? proc
             end
           end
@@ -60,7 +60,7 @@ module Syncshare
                                :routing_key => header.reply_to,
                                :correlation_id => header.correlation_id,
                                :headers => {
-                                 :type => 'rpc'
+                                 :type => 'direct'
                                })
     end
 

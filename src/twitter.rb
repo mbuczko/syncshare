@@ -5,14 +5,14 @@ class Twitter < Syncshare::Module
 
   # remote procedures
 
-  def rpc_observe(payload, header)
+  def direct_observe(payload, header)
     reply({
             :hash => "#britney",
             :amount => 10
           }, header)
   end
 
-  def rpc_upload(payload, header)
+  def direct_upload(payload, header)
     reply_all({
             :status => "ok",
             :url => "http://onet.pl"

@@ -19,7 +19,7 @@ start(_Type, _Args) ->
 		{'_', [
 			{"/syncshare/:service", sse_handler, [{channel, Channel}]},
 			{"/syncshare/:service/init", ini_handler, [{channel, Channel}]},
-			{"/syncshare/:service/rpc/:message", rpc_handler, [{channel, Channel}]},
+			{"/syncshare/:service/direct/:message", message_handler, [{channel, Channel}]},
 
             % TODO: remove in production.
             {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},

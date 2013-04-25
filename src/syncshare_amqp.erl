@@ -24,7 +24,7 @@ init_queue(Name, Channel, Service, Timeout) ->
     % bind to 'public' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
 
-    % bind to 'direct / rpc' exchange
+    % bind to 'direct' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-direct">>,  routing_key = Queue}),
 
     {ok, Queue}.

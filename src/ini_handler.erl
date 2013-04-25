@@ -54,14 +54,14 @@ Syncshare.Proxy = function(window, undefined) {
 
         // bubble message up to parent window
 
-        es.addEventListener('rpc', function(reply)        { msg({rpc: reply.data}); });
+        es.addEventListener('direct', function(reply)     { msg({direct: reply.data}); });
         es.addEventListener('broadcast', function(reply)  { msg({broadcast: reply.data}); });
         es.addEventListener('connection', function(reply) { });
 
-        // delegate RPC messages to rpc queue
+        // delegate direct messages to direct queue
 
         window.addEventListener('message', function(e) {
-            var url = '/syncshare/' + e.data.service + '/rpc/' + e.data.call;
+            var url = '/syncshare/' + e.data.service + '/direct/' + e.data.call;
             this.req = this.req || new xhr();
             this.req.connect(url, e.data.params);
         }, false);

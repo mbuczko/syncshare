@@ -47,7 +47,7 @@ info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Cha
     % acknowledge incoming message
     syncshare_amqp:ack(Channel, Tag),
 
-    % get type of message (rpc/public)
+    % get type of message (direct/public)
     {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
 
     Event = ["event: ", Type, "\ndata: ", Payload, "\n\n"],

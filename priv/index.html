@@ -8,8 +8,8 @@
   </body>
   <script type="text/javascript">
     var service = new Syncshare.Client('localhost:8080').lookup('twitter', {secure: true}).on({
-      rpc: function(payload) {
-          console.log('got rpc response: ', payload);
+      direct: function(payload) {
+          console.log('got direct response: ', payload);
       },
       broadcast: function(payload) {
           console.log('got broadcast response: ', payload);
@@ -17,8 +17,8 @@
     }).start();
 
     setTimeout(function() {
-        service.rpc('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
-		service.rpc('upload', {url: 'http://blahblah.pl'});
+        service.direct('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
+		    service.direct('upload', {url: 'http://blahblah.pl'});
     }, 300);
 
   </script>

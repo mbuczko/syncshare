@@ -1,5 +1,5 @@
 %% @doc RPC handler.
--module(rpc_handler).
+-module(message_handler).
 
 -export([init/3]).
 -export([handle/2]).
