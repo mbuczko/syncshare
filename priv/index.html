@@ -17,9 +17,9 @@
     }).start();
 
     setTimeout(function() {
-        service.direct('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
-		    service.direct('upload', {url: 'http://blahblah.pl'});
-    }, 300);
+        service.send('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
+        service.send('upload', {hash: 'britney', user: 'http://dupa.hasia.pl'});
+    }, 1000);
 
   </script>
 </html>

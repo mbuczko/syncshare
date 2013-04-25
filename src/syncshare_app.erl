@@ -17,9 +17,9 @@ start(_Type, _Args) ->
 
 	Dispatch = cowboy_router:compile([
 		{'_', [
-			{"/syncshare/:service", sse_handler, [{channel, Channel}]},
-			{"/syncshare/:service/init", ini_handler, [{channel, Channel}]},
-			{"/syncshare/:service/direct/:message", message_handler, [{channel, Channel}]},
+			{"/syncshare/sse/:service", sse_handler, [{channel, Channel}]},
+			{"/syncshare/sse/:service/frame", frame_handler, [{channel, Channel}]},
+			{"/syncshare/sse/:service/:queue/:message", message_handler, [{channel, Channel}]},
 
             % TODO: remove in production.
             {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},

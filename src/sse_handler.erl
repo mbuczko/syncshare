@@ -30,16 +30,15 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_qu
 	HTTPVer = cowboy_http:version_to_binary(Version),
     Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
     Type    = << "Content-Type: text/event-stream\r\nConnection: Keep-Alive\r\nCache-Control: no-cache\r\n" >>,
-    Cookie  = << "Set-Cookie: _syncshare=", Queue/binary, ";path=/syncshare/", Service/binary, ";HttpOnly\r\n" >>,
 
     io:format("basic.consume ~p~n", [Tag]),
 
-    Event = ["event: connection\ndata: ok\n\n"],
-    Transport:send(Socket, [Status, Type, Cookie, <<"\r\n">>, Event]),
+    Event = ["event: connection\ndata: ", << Queue/binary >>, "\n\n"],
+    Transport:send(Socket, [Status, Type, [], <<"\r\n">>, Event]),
 
 	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
 
-info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
+info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_queue=Queue, amqp_channel=Channel}=State) ->
 	[Socket, Transport] = cowboy_req:get([socket, transport], Req),
 
     #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, priority = _Priority}} = Content,
@@ -50,7 +49,7 @@ info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Cha
     % get type of message (direct/public)
     {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
 
-    Event = ["event: ", Type, "\ndata: ", Payload, "\n\n"],
+    Event = ["event: ", Type, "\ndata: ", Queue, "|", Payload, "\n\n"],
     Transport:send(Socket, Event),
 
     io:format("basic.deliver (~s)~n", [Type]),

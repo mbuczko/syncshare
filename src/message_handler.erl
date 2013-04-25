@@ -13,15 +13,15 @@ init(_Transport, Req, Opts) ->
 
 handle(Req, {amqp_channel, Channel}=State) ->
     {Service, _} = cowboy_req:binding(service, Req),
-    {Call, _} = cowboy_req:binding(message, Req),
+    {Queue, _}   = cowboy_req:binding(queue, Req),
+    {Call, _}    = cowboy_req:binding(message, Req),
 
-    {Cookie, Req2} = cowboy_req:cookie(<<"_syncshare">>, Req),
-    {ok, [{<<"body">>, Body}], Req3} = cowboy_req:body_qs(Req2),
+    {ok, [{<<"body">>, Body}], Req2} = cowboy_req:body_qs(Req),
 
-    syncshare_amqp:call(Channel, Cookie, #payload{service=Service, call=Call, body=Body}),
+    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Call, body=Body}),
 
-    {ok, Req4} = cowboy_req:reply(200, [], <<"ok">>, Req3),
-    {ok, Req4, State}.
+    {ok, Req3} = cowboy_req:reply(200, [], <<"ok">>, Req2),
+    {ok, Req3, State}.
 
 terminate(_Reason, _Req, _State) ->
 	ok.

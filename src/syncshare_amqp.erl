@@ -55,8 +55,6 @@ call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
     Uuid = ossp_uuid:make(v4, text),
     Props = #'P_basic'{correlation_id=Uuid, reply_to=Queue},
 
-    io:format("got RPC call. queue ~p~n", [Queue]),
-
     Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = Call},
     amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
     {ok, Uuid}.

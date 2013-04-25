@@ -18,12 +18,13 @@ Syncshare.Service = function(host, service, options) {
     var self = this;
 
     window.addEventListener('message', function(reply) {
-        var data = reply.data, direct = data.direct, broadcast = data.broadcast, handlers = self.handlers;
-        if (direct && handlers.direct) {
-            handlers.direct.call(this, direct);
-        } else
-        if (broadcast && handlers.broadcast) {
-            handlers.broadcast.call(this, broadcast);
+        var data = reply.data, 
+            type = data.type, 
+            payload = data.payload
+            handler = self.handlers[type];
+
+        if (payload && handler) {
+            handler.call(this, payload);
         }
     }, false);
 };
@@ -33,13 +34,13 @@ Syncshare.Service.prototype.on = function(handlers) {
     return this;
 };
 
-Syncshare.Service.prototype.direct = function(call, params) {
+Syncshare.Service.prototype.send = function(call, params) {
     this.iframe.contentWindow.postMessage({service: this.service, call: call, params: JSON.stringify(params) }, '*');
     return this;
 };
 
 Syncshare.Service.prototype.start = function() {
-    this.iframe.src = 'http://' + this.host + '/syncshare/' + this.service + '/init?timeout='+this.timeout;
+    this.iframe.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?timeout='+this.timeout;
     
     document.body.appendChild(this.iframe);
     return this;
