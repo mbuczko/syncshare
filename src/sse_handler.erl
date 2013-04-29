@@ -46,7 +46,7 @@ info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_queue=Queue
     % acknowledge incoming message
     syncshare_amqp:ack(Channel, Tag),
 
-    % get type of message (direct/public)
+    % get type of message (message / broadcast)
     {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
 
     Event = ["event: ", Type, "\ndata: ", Queue, "|", Payload, "\n\n"],

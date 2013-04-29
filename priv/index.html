@@ -8,7 +8,7 @@
   </body>
   <script type="text/javascript">
     var service = new Syncshare.Client('localhost:8080').lookup('twitter', {secure: true}).on({
-      direct: function(payload) {
+      message: function(payload) {
           console.log('got direct response: ', payload);
       },
       broadcast: function(payload) {

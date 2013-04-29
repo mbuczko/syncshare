@@ -40,7 +40,7 @@ Syncshare.Proxy = function(window, undefined) {
 
     var init = function(service) {
         var esr = new EventSource('/syncshare/sse/'+service),
-            msg = function(type, response) {
+            put = function(type, response) {
                 response = response.split('|');
 
                 // update current queue name
@@ -54,11 +54,11 @@ Syncshare.Proxy = function(window, undefined) {
 
         // bubble message up to parent window
 
-        esr.addEventListener('direct', function(reply)     { msg('direct', reply.data); });
-        esr.addEventListener('broadcast', function(reply)  { msg('broadcast', reply.data); });
+        esr.addEventListener('message', function(reply)    { put('message', reply.data); });
+        esr.addEventListener('broadcast', function(reply)  { put('broadcast', reply.data); });
         esr.addEventListener('connection', function(reply) { tok = reply.data; console.log('changed queue', tok)});
 
-        // delegate direct messages to direct queue
+        // delegate calls to designated queue
 
         window.addEventListener('message', function(e) {
             new Request('/syncshare/sse/' + e.data.service + '/'+tok+'/' + e.data.call).post(e.data.params);
