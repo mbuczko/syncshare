@@ -56,7 +56,7 @@ Syncshare.Proxy = function(window, undefined) {
 
         esr.addEventListener('message', function(reply)    { put('message', reply.data); });
         esr.addEventListener('broadcast', function(reply)  { put('broadcast', reply.data); });
-        esr.addEventListener('connection', function(reply) { tok = reply.data; console.log('changed queue', tok)});
+        esr.addEventListener('connection', function(reply) { tok = reply.data; });
 
         // delegate calls to designated queue
 
