@@ -13,9 +13,8 @@ init({tcp, http}, Req, Opts) ->
     Channel =  proplists:get_value(channel, Opts),
     {Service, _} = cowboy_req:binding(service, Req),
     {Timeout, _} = cowboy_req:qs_val(<<"timeout">>, Req, ?TIMEOUT),
-    {Cookie,  _} = cowboy_req:cookie(<<"_syncshare">>, Req),
 
-    {ok, Queue} = syncshare_amqp:init_queue(Cookie, Channel, Service, Timeout*2),
+    {ok, Queue} = syncshare_amqp:init_queue(Channel, Service, Timeout*2),
 
     io:format("Initializing connection to service: '~s' with queue=~p~n", [Service, Queue]),
 

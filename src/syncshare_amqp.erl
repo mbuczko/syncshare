@@ -3,7 +3,7 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/4, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
+-export([init_queue/3, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
@@ -16,8 +16,8 @@ init() ->
 	{ok, Channel} = amqp_connection:open_channel(Connection),
     {ok, Connection, Channel}.
 
-init_queue(Name, Channel, Service, Timeout) ->
-    Q = queue_name(Name),
+init_queue(Channel, Service, Timeout) ->
+    Q = queue_name(),
 
     #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = [{<<"x-expires">>, long, Timeout}]}),
     

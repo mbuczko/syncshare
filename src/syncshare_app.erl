@@ -21,6 +21,8 @@ start(_Type, _Args) ->
 			{"/syncshare/sse/:service/frame", frame_handler, [{channel, Channel}]},
 			{"/syncshare/sse/:service/:queue/:message", message_handler, [{channel, Channel}]},
 
+			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]},
+
             % TODO: remove in production.
             {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
 												 {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
@@ -33,6 +35,7 @@ start(_Type, _Args) ->
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
 		{env, [{dispatch, Dispatch}]}
 	]),
+
 	syncshare_sup:start_link().
 
 stop(_State) ->
