@@ -13,17 +13,15 @@ init({tcp, http}, Req, Opts) ->
     Channel =  proplists:get_value(channel, Opts),
     {Service, _} = cowboy_req:binding(service, Req),
     {Timeout, _} = cowboy_req:qs_val(<<"timeout">>, Req, ?TIMEOUT),
-    {Cookie,  _} = cowboy_req:cookie(<<"_syncshare">>, Req),
 
-    {ok, Queue} = syncshare_amqp:init_queue(Cookie, Channel, Service, Timeout*2),
+    {ok, Queue} = syncshare_amqp:init_queue(Channel, Service, Timeout*2),
 
-    io:format("Initializing connection to service: '~s' with queue=~p~n", [Service, Queue]),
+    lager:info("Initializing SSE connection to service: '~s' with queue=~p~n", [Service, Queue]),
 
     syncshare_amqp:listen(Channel, Queue),
     {loop, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}, Timeout, hibernate}.
 
-
-info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_queue=Queue}=State) ->
+info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{amqp_queue=Queue}=State) ->
     [Socket, Transport] = cowboy_req:get([socket, transport], Req),
 	{Version, _} = cowboy_req:version(Req),
 
@@ -31,7 +29,7 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_qu
     Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
     Type    = << "Content-Type: text/event-stream\r\nConnection: Keep-Alive\r\nCache-Control: no-cache\r\n" >>,
 
-    io:format("basic.consume ~p~n", [Tag]),
+    lager:info("basic.consume ~p~n", [Tag]),
 
     Event = ["event: connection\ndata: ", << Queue/binary >>, "\n\n"],
     Transport:send(Socket, [Status, Type, [], <<"\r\n">>, Event]),
@@ -52,16 +50,15 @@ info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_queue=Queue
     Event = ["event: ", Type, "\ndata: ", Queue, "|", Payload, "\n\n"],
     Transport:send(Socket, Event),
 
-    io:format("basic.deliver (~s)~n", [Type]),
-
+    lager:info("basic.deliver (~s)~n", [Type]),
     {loop, Req, State, hibernate};
 
 info(#'basic.cancel_ok'{}, Req, State) ->
-    io:format("basic.cancel_ok...~n"),
+    lager:info("basic.cancel_ok...~n"),
 	{loop, Req, State, hibernate};
 
 info(#'basic.cancel'{}, Req, State) ->
-    io:format("basic.cancel...~n"),
+    lager:info("basic.cancel...~n"),
 	{loop, Req, State, hibernate};
 
 info(_Message, Req, State) ->
@@ -69,12 +66,6 @@ info(_Message, Req, State) ->
 
 
 terminate(_Reason, _Req, #state{amqp_channel=Channel, consumer_tag=Tag}=_State) ->
-    io:format("Terminating with tag: ~p...~n", [Tag]),
+    lager:info("Terminating with tag: ~p...~n", [Tag]),
     syncshare_amqp:cancel_subscription(Channel, Tag),
     ok.
-
-get_header(Name, Headers, Default) ->
-	case lists:keyfind(Name, 1, Headers) of
-		false -> { ok, Default };
-		{Name, _, Value} -> {ok, Value}
-    end.

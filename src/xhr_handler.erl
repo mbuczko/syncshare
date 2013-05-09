@@ -1,5 +1,5 @@
-%% @doc RPC handler.
--module(message_handler).
+%% @doc XHR handler.
+-module(xhr_handler).
 
 -export([init/3]).
 -export([handle/2]).
@@ -14,11 +14,11 @@ init(_Transport, Req, Opts) ->
 handle(Req, {amqp_channel, Channel}=State) ->
     {Service, _} = cowboy_req:binding(service, Req),
     {Queue, _}   = cowboy_req:binding(queue, Req),
-    {Call, _}    = cowboy_req:binding(message, Req),
+    {Call, _}    = cowboy_req:binding(call, Req),
 
-    {ok, [{<<"body">>, Body}], Req2} = cowboy_req:body_qs(Req),
+    {ok, [{<<"payload">>, Payload}], Req2} = cowboy_req:body_qs(Req),
 
-    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Call, body=Body}),
+    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Call, load=Payload}),
 
     {ok, Req3} = cowboy_req:reply(200, [], <<"ok">>, Req2),
     {ok, Req3, State}.

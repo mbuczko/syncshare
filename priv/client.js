@@ -1,32 +1,70 @@
 var Syncshare = Syncshare || {};
 
-Syncshare.Client = function(host) {
+Syncshare.Client = function(host, options) {
     return {
-        lookup: function(service, options) {
+        lookup: function(service) {
             return new Syncshare.Service(host, service, options || {});
         }
     };
 };
 
 Syncshare.Service = function(host, service, options) {
+    var self = this, obj;
+
     this.host = host;
     this.service = service;
+    this.sse = options.sse || false;
     this.timeout = options.timeout || 60000;
-    this.iframe = document.createElement('iframe');
-    this.iframe.width = this.iframe.height = '0';
 
-    var self = this;
+    if (options.sse) {
 
-    window.addEventListener('message', function(reply) {
-        var data = reply.data, 
-            type = data.type, 
-            payload = data.payload
-            handler = self.handlers[type];
+        // server side events initialization phase
 
-        if (payload && handler) {
-            handler.call(this, payload);
-        }
-    }, false);
+        console.info('initializating SSE frame');
+
+        window.addEventListener('message', function(reply) {
+            var data = reply.data, 
+                type = data.type, 
+                payload = data.payload,
+                handler = self.handlers[type];
+
+            if (payload && handler) {
+                handler.call(this, payload);
+            }
+        }, false);
+
+        obj = this.channel = document.createElement('iframe');
+        obj.width = this.iframe.height = '0';
+        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?timeout='+this.timeout;
+
+        document.body.appendChild(frame);
+
+    } else {
+
+        // websocket initialization phase
+
+        console.info('initializating websockets');
+
+        obj = this.channel = new WebSocket("ws://"+this.host + '/syncshare/wbs/' + this.service);
+        obj.onopen = function() {
+            console.log('Connected');
+        };
+        obj.onmessage = function(evt) {
+            var data = evt.data.split('|'),
+                type = data[0],
+                payload = data[1],
+                handler = self.handlers[type];
+
+            console.log("Received: " + data);
+
+            if (payload && handler) {
+                handler.call(this, JSON.parse(payload));
+            }
+        };
+        obj.onclose = function() {
+            console.log('Connection closed');
+        };
+    }
 };
 
 Syncshare.Service.prototype.on = function(handlers) {
@@ -34,14 +72,12 @@ Syncshare.Service.prototype.on = function(handlers) {
     return this;
 };
 
-Syncshare.Service.prototype.send = function(call, params) {
-    this.iframe.contentWindow.postMessage({service: this.service, call: call, params: JSON.stringify(params) }, '*');
+Syncshare.Service.prototype.send = function(call, payload) {
+    if (this.channel.contentWindow) {
+        this.channel.contentWindow.postMessage({call: call, payload: payload}, '*');
+    } else {
+        this.channel.send(call + '|' + JSON.stringify(payload));
+    }
     return this;
 };
 
-Syncshare.Service.prototype.start = function() {
-    this.iframe.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?timeout='+this.timeout;
-    
-    document.body.appendChild(this.iframe);
-    return this;
-};

@@ -7,19 +7,19 @@
     initialising SSE connection...
   </body>
   <script type="text/javascript">
-    var service = new Syncshare.Client('localhost:8080').lookup('twitter', {secure: true}).on({
+    var service = new Syncshare.Client('localhost:8080', {sse: false, secure: true}).lookup('twitter').on({
       message: function(payload) {
           console.log('got direct response: ', payload);
       },
       broadcast: function(payload) {
           console.log('got broadcast response: ', payload);
       }
-    }).start();
+    });
 
-    setTimeout(function() {
+    /*setTimeout(function() {
         service.send('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
         service.send('upload', {hash: 'britney', user: 'http://dupa.hasia.pl'});
-    }, 1000);
+    }, 1000);*/
 
   </script>
 </html>
