@@ -34,10 +34,10 @@ Syncshare.Service = function(host, service, options) {
         }, false);
 
         obj = this.channel = document.createElement('iframe');
-        obj.width = this.iframe.height = '0';
+        obj.width = obj.height = '0';
         obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?timeout='+this.timeout;
 
-        document.body.appendChild(frame);
+        document.body.appendChild(obj);
 
     } else {
 

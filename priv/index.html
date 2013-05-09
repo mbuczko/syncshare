@@ -7,7 +7,7 @@
     initialising SSE connection...
   </body>
   <script type="text/javascript">
-    var service = new Syncshare.Client('localhost:8080', {sse: false, secure: true}).lookup('twitter').on({
+    var service = new Syncshare.Client('localhost:8080', {sse: true, secure: true}).lookup('twitter').on({
       message: function(payload) {
           console.log('got direct response: ', payload);
       },
