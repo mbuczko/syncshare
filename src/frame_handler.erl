@@ -30,11 +30,11 @@ Syncshare.Proxy = function(window, undefined) {
                 xhr = new XMLHttpRequest(); 
             }
         }
-        this.post = function(params) {
+        this.post = function(payload) {
             xhr.open('POST', url, true);
             xhr.setRequestHeader('Method', 'POST '+url+' HTTP/1.1');
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.send('body='+escape(params));
+            xhr.send('payload='+escape(payload));
         };
     };
 
@@ -61,7 +61,7 @@ Syncshare.Proxy = function(window, undefined) {
         // delegate calls to designated queue
 
         window.addEventListener('message', function(e) {
-            new Request('/syncshare/sse/' + e.data.service + '/'+tok+'/' + e.data.call).post(e.data.params);
+            new Request('/syncshare/sse/' + service + '/'+tok+'/'+e.data.call).post(JSON.stringify(e.data.payload));
         }, false);
     };
     init('~s');

@@ -19,7 +19,12 @@ init() ->
 init_queue(Channel, Service, Timeout) ->
     Q = queue_name(),
 
-    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = [{<<"x-expires">>, long, Timeout}]}),
+    Args = case Timeout of
+               0 -> [];
+               _ -> [{<<"x-expires">>, long, Timeout}]
+           end,
+                     
+    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = Args}),
     
     % bind to 'public' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
@@ -50,13 +55,13 @@ listen(Channel, Queue) ->
     Sub = #'basic.consume'{queue = Queue},
     #'basic.consume_ok'{} = amqp_channel:call(Channel, Sub).
 
-call(Channel, Queue, #payload{service=Service, call=Call, body=Body}) ->
+call(Channel, Queue, #payload{service=Service, call=Call, load=Payload}) ->
     % generate uuid as correlation id
     Uuid = ossp_uuid:make(v4, text),
     Props = #'P_basic'{correlation_id=Uuid, reply_to=Queue},
 
     Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = Call},
-    amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Body}),
+    amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload=Payload}),
     {ok, Uuid}.
 
 ack(Channel, Tag) ->

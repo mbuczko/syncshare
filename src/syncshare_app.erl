@@ -9,6 +9,8 @@
 %% API.
 start(_Type, _Args) ->
 
+    lager:set_loglevel(lager_console_backend, info),
+
     % init connection to RabbitMQ
     {ok, Connection, Channel} = syncshare_amqp:init(),
 
@@ -19,7 +21,7 @@ start(_Type, _Args) ->
 		{'_', [
 			{"/syncshare/sse/:service", sse_handler, [{channel, Channel}]},
 			{"/syncshare/sse/:service/frame", frame_handler, [{channel, Channel}]},
-			{"/syncshare/sse/:service/:queue/:message", message_handler, [{channel, Channel}]},
+			{"/syncshare/sse/:service/:call/:queue", xhr_handler, [{channel, Channel}]},
 
 			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]},
 
