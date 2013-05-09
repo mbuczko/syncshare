@@ -11,9 +11,3 @@
           service  :: string(),
           call     :: string(),
           load     :: string()}).
-
-get_header(Name, Headers, Default) ->
-	case lists:keyfind(Name, 1, Headers) of
-		false -> { ok, Default };
-		{Name, _, Value} -> {ok, Value}
-    end.

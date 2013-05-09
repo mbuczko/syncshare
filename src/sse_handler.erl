@@ -4,6 +4,8 @@
 -export([init/3, info/3]).
 -export([terminate/3]).
 
+-import(syncshare_utils, [get_header/3]).
+
 -include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
 
