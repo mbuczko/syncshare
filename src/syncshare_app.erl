@@ -28,10 +28,6 @@ start(_Type, _Args) ->
             % TODO: remove in production.
             {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
 												 {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
-%			{"/init", init_handler, []},
-%			{"/sse/[...]", sse_handler, [{connection, Connection}, {channel, Channel}]},
-%            {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
-%									   {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [
