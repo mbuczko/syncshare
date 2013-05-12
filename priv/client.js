@@ -2,7 +2,7 @@ var Syncshare = Syncshare || {};
 
 Syncshare.Client = function(host, options) {
     return {
-        lookup: function(service) {
+        connect: function(service) {
             return new Syncshare.Service(host, service, options || {});
         }
     };
@@ -35,7 +35,7 @@ Syncshare.Service = function(host, service, options) {
 
         obj = this.channel = document.createElement('iframe');
         obj.width = obj.height = '0';
-        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?timeout='+this.timeout;
+        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?token='+(options.auth_token || "")+'&timeout='+this.timeout;
 
         document.body.appendChild(obj);
 

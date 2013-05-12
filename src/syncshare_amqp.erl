@@ -3,7 +3,7 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/3, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
+-export([init_queue/4, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
@@ -16,22 +16,22 @@ init() ->
 	{ok, Channel} = amqp_connection:open_channel(Connection),
     {ok, Connection, Channel}.
 
-init_queue(Channel, Service, Timeout) ->
-    Q = queue_name(),
+init_queue(QName, Channel, Service, Timeout) ->
+    Q = queue_name(QName),
 
     Args = case Timeout of
                0 -> [];
                _ -> [{<<"x-expires">>, long, Timeout}]
            end,
-                     
-    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = Args}),
     
+    #'queue.declare_ok'{queue = Queue} = amqp_channel:call(Channel, #'queue.declare'{queue = Q, arguments = Args}),
+
     % bind to 'public' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-public">>}),
-
+ 
     % bind to 'direct' exchange
     #'queue.bind_ok'{} = amqp_channel:call(Channel, #'queue.bind'{queue = Queue, exchange = <<Service/binary, "-direct">>,  routing_key = Queue}),
-
+ 
     {ok, Queue}.
 
 declare_exchange(Channel, X, Scope) ->

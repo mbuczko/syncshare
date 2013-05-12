@@ -11,8 +11,10 @@ start(_Type, _Args) ->
 
     lager:set_loglevel(lager_console_backend, info),
 
+    erlydtl:compile("templates/frame.dtl", "frame_dtl", [{out_dir, "ebin"}]),
+
     % init connection to RabbitMQ
-    {ok, Connection, Channel} = syncshare_amqp:init(),
+    {ok, _Connection, Channel} = syncshare_amqp:init(),
 
     % create service and RPC exchanges
     syncshare_amqp:declare_exchanges(Channel, [<<"twitter">>, <<"rembranto">>]),
@@ -21,7 +23,7 @@ start(_Type, _Args) ->
 		{'_', [
 			{"/syncshare/sse/:service", sse_handler, [{channel, Channel}]},
 			{"/syncshare/sse/:service/frame", frame_handler, [{channel, Channel}]},
-			{"/syncshare/sse/:service/:call/:queue", xhr_handler, [{channel, Channel}]},
+			{"/syncshare/sse/:service/:call", xhr_handler, [{channel, Channel}]},
 
 			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]},
 
