@@ -20,7 +20,7 @@ Syncshare.Proxy = function(window, undefined) {
             xhr.open('POST', url, true);
             xhr.setRequestHeader('Method', 'POST '+url+' HTTP/1.1');
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.send('payload='+payload);
+            xhr.send('payload='+payload+'&token={{ token }}');
         };
     };
 

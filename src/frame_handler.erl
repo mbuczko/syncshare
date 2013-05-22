@@ -16,10 +16,10 @@ handle(Req, State) ->
     {Service, _} = cowboy_req:binding(service, Req),
     {Token, _} = cowboy_req:qs_val(<<"token">>, Req, ""),
 
-    {ok, HTML} = frame_dtl:render([{service, Service}]),
+    {ok, HTML} = frame_dtl:render([{service, Service}, {token, Token}]),
 
     % setup an initial session in encrypted cookie
-    Encoded = termit:encode_base64({<<>>, Token}, ?COOKIE_SECRET),
+    Encoded = termit:encode_base64(<<>>, ?COOKIE_SECRET),
     Cookie  = cookie_string(Service, Encoded),
 
 	{ok, Req2} = cowboy_req:reply(200, [{<<"Set-Cookie">>, Cookie}], HTML, Req),

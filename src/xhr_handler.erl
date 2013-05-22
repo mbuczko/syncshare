@@ -17,13 +17,12 @@ handle(Req, {amqp_channel, Channel}=State) ->
     {Call, _}    = cowboy_req:binding(call, Req),
 
     % extract payload from POST request
-    {ok, [{<<"payload">>, Payload}], Req2} = cowboy_req:body_qs(Req),
+    {ok, [{<<"payload">>, Payload},{<<"token">>, Token}], Req2} = cowboy_req:body_qs(Req),
 
     % decode cookie
-    {ok, Session}  = termit:decode_base64(Cookie, ?COOKIE_SECRET),
-    {QName, Token} = Session,
+    {ok, QName} = termit:decode_base64(Cookie, ?COOKIE_SECRET),
 
-    syncshare_amqp:call(Channel, QName, #payload{service=Service, call=Call, load=Payload}),
+    syncshare_amqp:call(Channel, QName, #payload{service=Service, call=Call, load=Payload, token=Token}),
 
     {ok, Req3} = cowboy_req:reply(200, [], <<"ok">>, Req2),
     {ok, Req3, State}.

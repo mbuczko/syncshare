@@ -35,7 +35,7 @@ Syncshare.Service = function(host, service, options) {
 
         obj = this.channel = document.createElement('iframe');
         obj.width = obj.height = '0';
-        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?token='+(options.auth_token || "")+'&timeout='+this.timeout;
+        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?token='+(options.token || "")+'&timeout='+this.timeout;
 
         document.body.appendChild(obj);
 

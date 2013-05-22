@@ -19,8 +19,7 @@ init({tcp, http}, Req, Opts) ->
     {Cookie, Req2} = cowboy_req:cookie(<< ?COOKIE_NAME >>, Req),
 
     % decode cookie
-    {ok, Session}  = termit:decode_base64(Cookie, ?COOKIE_SECRET),
-    {QName, Token} = Session,
+    {ok, QName}  = termit:decode_base64(Cookie, ?COOKIE_SECRET),
 
     % initialize AMQP queue
     {ok, Queue} = syncshare_amqp:init_queue(QName, Channel, Service, Timeout*2),
@@ -28,11 +27,11 @@ init({tcp, http}, Req, Opts) ->
     % and start listening...
     syncshare_amqp:listen(Channel, Queue),
 
-    lager:info("Initializing SSE connection to service: '~s' with queue=~p and token=~p~n", [Service, Queue, Token]),
+    lager:info("Initializing SSE connection to service: '~s' with queue=~p cookie=~p", [Service, Queue, QName]),
 
-    {loop, Req2, #state{service=Service, session={QName, Token}, amqp_channel=Channel, amqp_queue=Queue}, Timeout, hibernate}.
+    {loop, Req2, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}, Timeout, hibernate}.
 
-info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, session={QName, Token}, amqp_queue=Queue}=State) ->
+info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_queue=Queue}=State) ->
     [Socket, Transport] = cowboy_req:get([socket, transport], Req),
 	{Version, _} = cowboy_req:version(Req),
 
@@ -40,12 +39,8 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, session
     Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
     Type    = << "Content-Type: text/event-stream\r\nConnection: Keep-Alive\r\nCache-Control: no-cache\r\n" >>,
 
-    % store new queue name in a session if it differs from existing one
-    Cookie = case QName of
-               Queue -> [];
-               _ -> Encoded = cookie_string(Service, termit:encode_base64({Queue, Token}, ?COOKIE_SECRET)),
-                    << "Set-Cookie: ", Encoded/binary, "\r\n" >>
-           end,
+    Encoded = cookie_string(Service, termit:encode_base64(Queue, ?COOKIE_SECRET)),
+    Cookie  = << "Set-Cookie: ", Encoded/binary, "\r\n" >>,
 
     lager:info("basic.consume ~p~n", [Tag]),
 

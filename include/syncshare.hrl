@@ -1,7 +1,6 @@
 %% handler state
 -record(state, {
           service      :: binary(),
-          session      :: any(),
           consumer_tag :: any(),
           delivery_tag :: any(),
           amqp_channel :: any(),
@@ -11,7 +10,8 @@
 -record(payload, {
           service  :: string(),
           call     :: string(),
-          load     :: string()}).
+          load     :: string(),
+          token    :: string()}).
 
 %% SSE session params
 -define(COOKIE_NAME,   "_syncshare").
