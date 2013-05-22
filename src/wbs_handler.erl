@@ -19,7 +19,7 @@ websocket_init(_TransportName, Req, Opts) ->
     Channel =  proplists:get_value(channel, Opts),
     {Service, _} = cowboy_req:binding(service, Req),
 
-    {ok, Queue} = syncshare_amqp:init_queue(Channel, Service, 0),
+    {ok, Queue} = syncshare_amqp:init_queue(<<>>, Channel, Service, 0),
 
     lager:info("Initializing WEBSOCKET connection to service: '~s' with queue=~p~n", [Service, Queue]),
 
@@ -27,9 +27,10 @@ websocket_init(_TransportName, Req, Opts) ->
 	{ok, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}}.
 
 websocket_handle({text, Msg}, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}=State) ->
-    [Call|Payload] = string:tokens(binary_to_list(Msg), "|"),
+    [Call|Body] = re:split(Msg, "\\|", [{return, binary}, {parts, 3}]),
+    [Token|Payload] = Body,
 
-    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call = list_to_binary(Call), load = list_to_binary(Payload)}),
+    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Call, token=Token, load=list_to_binary(Payload)}),
 	{ok, Req, State};
 
 websocket_handle(_Data, Req, State) ->

@@ -27,10 +27,8 @@ Syncshare.Proxy = function(window, undefined) {
     var init = function(service) {
         var esr = new EventSource('/syncshare/sse/'+service),
             msg = function(type, response) {
-                response = response.split('|');
-
                 // send the message back to parent frame
-                window.parent.postMessage({type: type, payload: JSON.parse(response[1])}, '*');
+                window.parent.postMessage({type: type, payload: JSON.parse(response)}, '*');
             };
 
 

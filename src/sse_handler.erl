@@ -60,7 +60,7 @@ info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_queue=Queue
     % get type of message (message / broadcast)
     {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
 
-    Event = ["event: ", Type, "\ndata: ", Queue, "|", Payload, "\n\n"],
+    Event = ["event: ", Type, "\ndata: ", Payload, "\n\n"],
     Transport:send(Socket, Event),
 
     lager:info("basic.deliver (~s)~n", [Type]),

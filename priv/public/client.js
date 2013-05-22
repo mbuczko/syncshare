@@ -15,6 +15,7 @@ Syncshare.Service = function(host, service, options) {
     this.service = service;
     this.sse = options.sse || false;
     this.timeout = options.timeout || 60000;
+    this.token = options.token || "";
 
     if (options.sse) {
 
@@ -35,7 +36,7 @@ Syncshare.Service = function(host, service, options) {
 
         obj = this.channel = document.createElement('iframe');
         obj.width = obj.height = '0';
-        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?token='+(options.token || "")+'&timeout='+this.timeout;
+        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?token='+this.token+'&timeout='+this.timeout;
 
         document.body.appendChild(obj);
 
@@ -50,12 +51,10 @@ Syncshare.Service = function(host, service, options) {
             console.log('Connected');
         };
         obj.onmessage = function(evt) {
-            var data = evt.data.split('|'),
-                type = data[0],
-                payload = data[1],
+            var data = evt.data,
+                type = data.split('|', 1)[0],
+                payload = data.substring(type.length+1),
                 handler = self.handlers[type];
-
-            console.log("Received: " + data);
 
             if (payload && handler) {
                 handler.call(this, JSON.parse(payload));
@@ -76,7 +75,7 @@ Syncshare.Service.prototype.send = function(call, payload) {
     if (this.channel.contentWindow) {
         this.channel.contentWindow.postMessage({call: call, payload: payload}, '*');
     } else {
-        this.channel.send(call + '|' + JSON.stringify(payload));
+        this.channel.send(call + '|' + this.token + '|' + JSON.stringify(payload));
     }
     return this;
 };

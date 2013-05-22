@@ -8,7 +8,7 @@
   </body>
 
   <script type="text/javascript">
-    var service = new Syncshare.Client('localhost:8080', {sse: true, token: '123'}).connect('twitter').on({
+    var service = new Syncshare.Client('localhost:8080', {sse: false, token: '123'}).connect('twitter').on({
       message: function(payload) {
           console.log('got direct response: ', payload);
       },
@@ -16,11 +16,6 @@
           console.log('got broadcast response: ', payload);
       }
     });
-
-    /*setTimeout(function() {
-        service.send('observe', {hash: 'britney', user: 'http://dupa.hasia.pl'});
-        service.send('upload', {hash: 'britney', user: 'http://dupa.hasia.pl'});
-    }, 1000);*/
 
   </script>
 </html>
