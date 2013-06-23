@@ -34,7 +34,7 @@ get '/' do
   puts current_user
   
   if current_user.nil?
-    "You're not logged in. <a href='/login'>Login here</a>."
+    "You're not logged in. <a href='/login'>Please, login via Twitter.</a>."
   else
     erb :index
   end

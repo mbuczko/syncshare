@@ -13,11 +13,15 @@ start(_Type, _Args) ->
 
     erlydtl:compile("templates/frame.dtl", "frame_dtl", [{out_dir, "ebin"}]),
 
-    % init connection to RabbitMQ
+    % initialize mnesia based cache
+    {ok, Cache} = syncshare_cache:init(),
+
+    % initialize connection to RabbitMQ
     {ok, _Connection, Channel} = syncshare_amqp:init(),
 
-    % create service and RPC exchanges
+    % create services exchanges
     syncshare_amqp:declare_exchanges(Channel, [<<"twitter">>, <<"rembranto">>]),
+
 
 	Dispatch = cowboy_router:compile([
 		{'_', [
@@ -25,11 +29,7 @@ start(_Type, _Args) ->
 			{"/syncshare/sse/:service/frame", frame_handler, [{channel, Channel}]},
 			{"/syncshare/sse/:service/:call", xhr_handler, [{channel, Channel}]},
 
-			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]},
-
-            % TODO: remove in production.
-            {"/[...]", cowboy_static, [{directory, {priv_dir, syncshare, []}},
-												 {mimetypes, {fun mimetypes:path_to_mimes/2, default}}]}
+			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]}
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [

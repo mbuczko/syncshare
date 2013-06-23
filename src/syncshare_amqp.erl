@@ -35,11 +35,12 @@ init_queue(QName, Channel, Service, Timeout) ->
     {ok, Queue}.
 
 declare_exchange(Channel, X, Scope) ->
-    {Suffix, Type} = case Scope of
-                       public -> {<<"public">>, <<"fanout">>};
-                       direct -> {<<"direct">>, <<"topic">>}
-                   end,
-    amqp_channel:call(Channel, #'exchange.declare'{exchange = <<X/binary, "-", Suffix/binary>>, type = Type}).
+    Suffix = atom_to_binary(Scope, latin1),
+    Type = case Scope of
+               public -> <<"fanout">>;
+               direct -> <<"topic">>
+           end,
+    amqp_channel:call(Channel, #'exchange.declare'{exchange = << X/binary, "-", Suffix/binary >>, type = Type}).
 
 declare_exchanges(Channel, E) ->
     lists:foreach(fun(X) ->

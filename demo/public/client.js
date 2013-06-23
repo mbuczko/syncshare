@@ -57,7 +57,7 @@ Syncshare.Service = function(host, service, options) {
                 handler = self.handlers[type];
 
             if (payload && handler) {
-                handler.call(this, JSON.parse(payload));
+                handler.call(this, payload);
             }
         };
         obj.onclose = function() {
@@ -75,7 +75,7 @@ Syncshare.Service.prototype.send = function(call, payload) {
     if (this.channel.contentWindow) {
         this.channel.contentWindow.postMessage({call: call, payload: payload}, '*');
     } else {
-        this.channel.send(call + '|' + this.token + '|' + JSON.stringify(payload));
+        this.channel.send(call + '|' + this.token + '|' + payload);
     }
     return this;
 };

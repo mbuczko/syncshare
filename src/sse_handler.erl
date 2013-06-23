@@ -4,8 +4,7 @@
 -export([init/3, info/3]).
 -export([terminate/3]).
 
--import(syncshare_utils, [get_header/3]).
--import(syncshare_utils, [cookie_string/2]).
+-import(syncshare_utils, [cookie_string/2, get_header/3]).
 
 -include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
@@ -49,7 +48,7 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_qu
 
 	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
 
-info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_queue=Queue, amqp_channel=Channel}=State) ->
+info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{service=Service, amqp_channel=Channel}=State) ->
 	[Socket, Transport] = cowboy_req:get([socket, transport], Req),
 
     #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, priority = _Priority}} = Content,

@@ -13,6 +13,13 @@
           load     :: string(),
           token    :: string()}).
 
+-record(cached, {
+          service  :: binary(),
+          messages :: binary()}).
+
+%% How many broadcast responses to cache
+-define(KEEP_MSGS, 10).
+
 %% SSE session params
 -define(COOKIE_NAME,   "_syncshare").
 -define(COOKIE_PATH,   "/syncshare/sse/").

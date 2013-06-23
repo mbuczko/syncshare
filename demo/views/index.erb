@@ -8,7 +8,7 @@
   </body>
 
   <script type="text/javascript">
-    var service = new Syncshare.Client('localhost:8080', {sse: false, token: '123'}).connect('twitter').on({
+    var service = new Syncshare.Client('localhost:8080', {sse: true, token: "<%= current_user['name'] %>"}).connect('twitter').on({
       message: function(payload) {
           console.log('got direct response: ', payload);
       },

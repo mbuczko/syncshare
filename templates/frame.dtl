@@ -26,21 +26,18 @@ Syncshare.Proxy = function(window, undefined) {
 
     var init = function(service) {
         var esr = new EventSource('/syncshare/sse/'+service),
-            msg = function(type, response) {
-                // send the message back to parent frame
-                window.parent.postMessage({type: type, payload: JSON.parse(response)}, '*');
-            };
+            msg = function(type, response) { window.parent.postMessage({type: type, payload: response}, '*'); };
 
 
         // bubble message up to parent window
 
-        esr.addEventListener('message',    function(reply) { msg('message', reply.data); });
-        esr.addEventListener('broadcast',  function(reply) { msg('broadcast', reply.data); });
+        esr.addEventListener('message',   function(reply) { msg('message', reply.data); });
+        esr.addEventListener('broadcast', function(reply) { msg('broadcast', reply.data); });
 
         // delegate calls to designated queue
 
         window.addEventListener('message', function(e) {
-            new Request('/syncshare/sse/' + service +'/'+ e.data.call).post(JSON.stringify(e.data.payload));
+            new Request('/syncshare/sse/' + service +'/'+ e.data.call).post(e.data.payload);
         }, false);
     };
     init('{{ service }}');
