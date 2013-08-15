@@ -1,4 +1,3 @@
-%% @doc SSE proxy frame initialization handler.
 -module(frame_handler).
 
 -export([init/3]).
@@ -15,6 +14,8 @@ init(_Transport, Req, _Opts) ->
 handle(Req, State) ->
     {Service, _} = cowboy_req:binding(service, Req),
     {Token, _} = cowboy_req:qs_val(<<"token">>, Req, ""),
+
+    lager:info("Rendering for service ~p", [Service]),
 
     {ok, HTML} = frame_dtl:render([{service, Service}, {token, Token}]),
 

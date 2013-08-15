@@ -10,7 +10,7 @@
 -record(payload, {
           service  :: string(),
           call     :: string(),
-          load     :: string(),
+          data     :: string(),
           token    :: string()}).
 
 -record(cached, {

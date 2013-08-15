@@ -1,21 +1,22 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <title>Syncshare test</title>
-    <script type="text/javascript" src="client.js"></script>
+    <script type="text/javascript" src="easyXDM.debug.js"></script>
   </head>
   <body>
     Welcome on the board <em> <%= current_user['name'] %> </em>
   </body>
 
   <script type="text/javascript">
-    var service = new Syncshare.Client('localhost:8080', {sse: true, token: "<%= current_user['name'] %>"}).connect('twitter').on({
-      message: function(payload) {
-          console.log('got direct response: ', payload);
-      },
-      broadcast: function(payload) {
-          console.log('got broadcast response: ', payload);
-      }
+
+    var socket = new easyXDM.Socket({
+        remote: "http://localhost:8080/syncshare/twitter",
+        onMessage: function(data) {
+            console.log(JSON.parse(data));
+        }
     });
+
+    socket.postMessage(JSON.stringify({call: 'upload', data: 'dupa buzka'}));
 
   </script>
 </html>

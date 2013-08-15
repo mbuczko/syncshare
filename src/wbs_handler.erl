@@ -27,10 +27,10 @@ websocket_init(_TransportName, Req, Opts) ->
 	{ok, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}}.
 
 websocket_handle({text, Msg}, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}=State) ->
-    [Call|Body] = re:split(Msg, "\\|", [{return, binary}, {parts, 3}]),
-    [Token|Payload] = Body,
+    [Fn|Body] = re:split(Msg, "\\|", [{return, binary}, {parts, 3}]),
+    [Token|Data] = Body,
 
-    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Call, token=Token, load=list_to_binary(Payload)}),
+    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Fn, token=Token, data=list_to_binary(Data)}),
 	{ok, Req, State};
 
 websocket_handle(_Data, Req, State) ->
@@ -49,16 +49,19 @@ websocket_info(#'basic.cancel'{}, Req, State) ->
 	{ok, Req, State};
 
 websocket_info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
-    #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, priority = _Priority}} = Content,
+    #amqp_msg{payload = Payload, props = #'P_basic'{headers = Headers, correlation_id = Id}} = Content,
 
     % acknowledge incoming message
     syncshare_amqp:ack(Channel, Tag),
 
-    % get type of message (message / broadcast)
-    {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
+    lager:info("got response with headers...~p ~p",[Id, Headers]),
 
-    lager:info("basic.deliver (~s)~n", [Type]),
-    {reply, {text, [Type, "|", Payload]}, Req, State};
+    % get type of message (message / broadcast) and called function name
+    {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
+    [Call|_] = string:tokens(binary_to_list(Id), "-"),
+
+    lager:info("basic.deliver (~s|~s)~n", [Call, Type]),
+    {reply, {text, [Call, "|", Type, "|", Payload]}, Req, State};
 
 websocket_info(_Info, Req, State) ->
 	{ok, Req, State}.

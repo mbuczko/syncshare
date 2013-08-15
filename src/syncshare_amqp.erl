@@ -3,7 +3,7 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/4, declare_exchange/3, declare_exchanges/2, ack/2, call/3]).
+-export([init_queue/4, declare_exchanges/2, declare_exchange/3, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
@@ -56,13 +56,13 @@ listen(Channel, Queue) ->
     Sub = #'basic.consume'{queue = Queue},
     #'basic.consume_ok'{} = amqp_channel:call(Channel, Sub).
 
-call(Channel, Queue, #payload{service=Service, call=Call, load=Payload, token=Token}) ->
+call(Channel, Queue, #payload{service=Service, call=Call, data=Data, token=Token}) ->
     % generate uuid as correlation id
     Uuid = ossp_uuid:make(v4, text),
-    Props = #'P_basic'{correlation_id=Uuid, reply_to=Queue},
+    Props = #'P_basic'{correlation_id= <<Call/binary, "-", Uuid/binary>>, reply_to=Queue},
 
     Publish = #'basic.publish'{exchange = <<Service/binary, "-direct">>, routing_key = Call},
-    amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload = <<Token/binary, ".", Payload/binary>>}),
+    amqp_channel:cast(Channel, Publish, #amqp_msg{props=Props, payload = <<Token/binary, "|", Data/binary>>}),
     {ok, Uuid}.
 
 ack(Channel, Tag) ->
