@@ -3,24 +3,22 @@ console.log('loaded twitter.js provider');
 
 Syncshare = (function(service, proto, auth) {
 
-    var socket;
-
     function connect(callback) {
-        var channel;
+        var channel, socket;
 
-        if ("WebSocket" in window) {
+        if ("WebSocket" in window && (proto === 'auto' || proto === 'websockets')) {
 
             console.log('going with WEBSOCKETS', service);
 
             channel = new WebSocket("ws://" + 'localhost:8080/syncshare/wbs/' + service);
             channel.onopen = function() {
                 console.log('Connected');
-                if (callback) { callback(channel); }
+                socket = callback ? callback(this) : null;
             };
             channel.onmessage = function(evt) {
                 if (socket && evt.data) {
                     var data = evt.data.split("|", 2);
-                    socket.postMessage(JSON.stringify({call: data[0], type: data[1], data: JSON.parse(evt.data.substring(data[0].length+data[1].length+2))}));
+                    socket.reply({call: data[0], type: data[1], data: JSON.parse(evt.data.substring(data[0].length+data[1].length+2))});
                 }
             };
             channel.onclose = function() {
@@ -37,24 +35,29 @@ Syncshare = (function(service, proto, auth) {
 
     function send(channel, fn, data) {
         if (channel.send) {
-            channel.send(fn + "|" + auth + "|" + (data || ""));
+            channel.send(fn + "|" + auth + "|" + JSON.stringify(data || ""));
         }
     }
 
     connect(function(channel) {
-        socket = new easyXDM.Socket({
-            onMessage: function(message, origin) {
-                var json = JSON.parse(message);
+        return new easyXDM.Rpc({},{ 
+            local: { 
+                call: function(message, successFn, errorFn) {
+                    var json = JSON.parse(message);
+                    if (json.call) {
+                        send(channel, json.call, json.data);
+                    }
+                }
+            },
+            remote: {
+                reply: function() { }
 
-                console.log('MESSAGE', json);
-
-                if (json.call) {
-                    send(channel, json.call, json.data);
-                }                    
             }
         });
     });
 
+    return {
+        connect: connect
+    };
+
 })('twitter', 'auto', '123');
-
-

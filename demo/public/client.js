@@ -1,82 +1,45 @@
-var Syncshare = Syncshare || {};
+var Syncshare = (function() {
 
-Syncshare.Client = function(host, options) {
-    return {
-        connect: function(service) {
-            return new Syncshare.Service(host, service, options || {});
+    var handlers = [];
+
+    function connect(url, callback) {
+        var socket = new easyXDM.Rpc({remote: url}, {
+            local: {
+                reply: function(json, successFn, errorFn) {
+                    if (json && json.call && handlers[json.call]) {
+                        handlers[json.call](json.data, json.type === 'broadcast');
+                    }
+                }
+            },
+            remote: {
+                call: function() {}
+            }
+        });
+
+        var session = {
+            on: function(fn, callback) {
+                handlers[fn] = callback;
+                return this;
+            },
+            call: function(fn, params) {
+                if (socket) {
+                    socket.call(JSON.stringify({call: fn, data: (params || {})}));
+                }
+            }
+        };
+
+        if (callback && socket && session) {
+            callback(session);
+        } else {
+            throw "Syncshare: could not establish connection.";
         }
+
+        return session;
     };
-};
 
-Syncshare.Service = function(host, service, options) {
-    var self = this, obj;
 
-    this.host = host;
-    this.service = service;
-    this.sse = options.sse || false;
-    this.timeout = options.timeout || 60000;
-    this.token = options.token || "";
+    return {
+        connect: connect
+    };
 
-    if (options.sse) {
-
-        // server side events initialization phase
-
-        console.info('initializating SSE frame');
-
-        window.addEventListener('message', function(reply) {
-            var data = reply.data, 
-                type = data.type, 
-                payload = data.payload,
-                handler = self.handlers[type];
-
-            if (payload && handler) {
-                handler.call(this, payload);
-            }
-        }, false);
-
-        obj = this.channel = document.createElement('iframe');
-        obj.width = obj.height = '0';
-        obj.src = 'http://' + this.host + '/syncshare/sse/' + this.service + '/frame?token='+this.token+'&timeout='+this.timeout;
-
-        document.body.appendChild(obj);
-
-    } else {
-
-        // websocket initialization phase
-
-        console.info('initializating websockets');
-
-        obj = this.channel = new WebSocket("ws://"+this.host + '/syncshare/wbs/' + this.service);
-        obj.onopen = function() {
-            console.log('Connected');
-        };
-        obj.onmessage = function(evt) {
-            var data = evt.data,
-                type = data.split('|', 1)[0],
-                payload = data.substring(type.length+1),
-                handler = self.handlers[type];
-
-            if (payload && handler) {
-                handler.call(this, payload);
-            }
-        };
-        obj.onclose = function() {
-            console.log('Connection closed');
-        };
-    }
-};
-
-Syncshare.Service.prototype.on = function(handlers) {
-    this.handlers = handlers || {};
-    return this;
-};
-
-Syncshare.Service.prototype.send = function(call, payload) {
-    if (this.channel.contentWindow) {
-        this.channel.contentWindow.postMessage({call: call, payload: payload}, '*');
-    } else {
-        this.channel.send(call + '|' + this.token + '|' + payload);
-    }
-    return this;
-};
-
+}());
