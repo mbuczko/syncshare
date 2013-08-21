@@ -1,3 +1,2 @@
-<script src="providers/xdm/easyXDM.debug.js"></script>
 <script src="providers/{{ service }}.js"></script>
 
