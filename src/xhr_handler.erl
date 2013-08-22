@@ -20,9 +20,9 @@ handle(Req, {amqp_channel, Channel}=State) ->
     {ok, [{<<"payload">>, Payload}], Req2} = cowboy_req:body_qs(Req),
 
     % decode cookie
-    {ok, {QName, Token}} = termit:decode_base64(Cookie, ?COOKIE_SECRET),
+    {ok, {Queue, Token}} = termit:decode_base64(Cookie, ?COOKIE_SECRET),
 
-	lager:info("XHR with token=~p and data=~p", [Token, Payload]),
+	lager:info("XHR with token=~p and queue=~p", [Token, Queue]),
 
     syncshare_amqp:call(Channel, QName, #payload{service=Service, call=Call, data=Payload, token=Token}),
 

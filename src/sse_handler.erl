@@ -38,7 +38,7 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=T
     Status  = << HTTPVer/binary, " 200 OK\r\n" >>,
     Type    = << "Content-Type: text/event-stream\r\nConnection: Keep-Alive\r\nCache-Control: no-cache\r\n" >>,
 
-    Encoded = cookie_string(Service, <<"sse/">>, termit:encode_base64({Queue, Token}, ?COOKIE_SECRET)),
+    Encoded = cookie_string(Service, <<"sse">>, termit:encode_base64({Queue, Token}, ?COOKIE_SECRET)),
     Cookie  = << "Set-Cookie: ", Encoded/binary, "\r\n" >>,
 
     lager:info("basic.consume ~p~n", [Tag]),
