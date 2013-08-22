@@ -9,20 +9,19 @@
 
   <script type="text/javascript">
 
-    var client = new Syncshare.Client('http://localhost:8080/syncshare/twitter', {token: "<%= current_user['name'] %>"}).connect(function(session) {
+    var ses, client = new Syncshare.Client('http://localhost:8080/syncshare/twitter', {token: "<%= current_user['name'] %>", transport: 'sse'}).connect(function(session) {
         session
            .on('upload', function(data, isBroadcast) {
                console.log('DATA', data, 'BROADCAST', isBroadcast);
            });
-
+		ses=session;
 
             // classic call
-            //session.call('upload', { abc: 1 });
+            session.call('upload', { abc: 1 });
     
             // RPC call
-            var rpc = session.rpc();
-            
-			rpc.upload({abc: 2}, 'dupa').then(function(success) { console.log('SUCCESS', success); }, function(error) { console.log('ERROR', error); });
+            // var rpc = session.rpc();            
+			// rpc.upload({abc: 2}, 'dupa').then(function(success) { console.log('SUCCESS', success); }, function(error) { console.log('ERROR', error); });
     });
 
 

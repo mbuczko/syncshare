@@ -23,7 +23,9 @@ start(_Type, _Args) ->
 		{'_', [
 			{"/syncshare/:service", frame_handler, [{channel, Channel}]},
 			{"/syncshare/sse/:service", sse_handler, [{channel, Channel}]},
+			{"/syncshare/sse/:service/:call", xhr_handler, [{channel, Channel}]},
 			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]},
+
             {"/syncshare/providers/[...]", cowboy_static, [
                                                            {directory, {priv_dir, syncshare, []}},
                                                            {mimetypes, {fun mimetypes:path_to_mimes/2, default}}

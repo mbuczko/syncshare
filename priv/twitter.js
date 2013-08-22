@@ -1,6 +1,6 @@
 console.log('loaded twitter.js provider');
 
-Syncshare = (function(service, proto, auth) {
+Syncshare = (function(service, proto) {
     var channel, remotes = {};
 
     var request = function(url) {
@@ -26,7 +26,7 @@ Syncshare = (function(service, proto, auth) {
             xhr.open('POST', url, true);
             xhr.setRequestHeader('Method', 'POST '+url+' HTTP/1.1');
             xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.send('payload='+payload);
+            xhr.send('payload='+JSON.stringify(payload));
         };
 		this.get = function(payload) {
 			if (payload) {
@@ -67,9 +67,13 @@ Syncshare = (function(service, proto, auth) {
 					};
 					channel.onmessage = function(e) {
 						if (e.data) {
-							var data = e.data.split("|", 2);
+							var data = e.data.split(" ", 2);
 							reply(data[0], data[1], JSON.parse(e.data.substring(data[0].length+data[1].length+2)));
 						}
+					};
+					channel.onerror = function() {
+						// let the parent know that we're ready
+						reply(fn, null, Object.keys(remotes), dfid, false);
 					};
 					channel.onclose = function() {
 						console.log('Connection closed');
@@ -79,11 +83,12 @@ Syncshare = (function(service, proto, auth) {
 					
 					channel = new EventSource('/syncshare/sse/' + service);
 					channel.addEventListener('message', function(response) {
-						reply(response.call, 'message', response.data);
+						var data = response.data.split(" ", 2);
+						reply(data[0], data[1], JSON.parse(response.data.substring(data[0].length+data[1].length+2)));
 					});
-					channel.addEventListener('broadcast', function(response) {
-						reply(response.call, 'broadcast', response.data);
-					});
+
+					// let the parent know that we're ready
+					reply(fn, null, Object.keys(remotes), dfid, true);
 				}
 			}
 			else
@@ -102,27 +107,20 @@ Syncshare = (function(service, proto, auth) {
 		// redirecting to opened channel
 
 		if (channel && channel.send) {
-			channel.send(fn + "|" + auth + "|" + JSON.stringify(data || ""));
+			channel.send(fn + " " + JSON.stringify(data || ""));
 		} else {
 			new request('/syncshare/sse/' + service +'/'+ fn).post(data);
-		}            
+		}
 	}, false);
-
-    // window.parent.postMessage({rpc: Object.keys(remotes)}, '*');
 
     return {
         remote: remote
     };
 
-})('twitter', 'auto', '123');
+})('twitter', 'sse');
 
 Syncshare.remote({
     upload: function(arg1, arg2) {
-
-        var self = this;
-
-        setTimeout(function() {
-            self.success({ok: true});
-        }, 2000);
+        this.success({ok: true});
     }
 });

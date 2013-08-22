@@ -13,6 +13,7 @@ Syncshare.Service = function(host, options) {
     var self = this, handlers = {}, frame, rpc, deferred = new Syncshare.Deferred();
 
     this.host = host;
+	this.transport = options.transport || 'wbs';
     this.timeout = options.timeout || 60000;
     this.token = options.token || "";
 	this.session = {
@@ -43,6 +44,8 @@ Syncshare.Service = function(host, options) {
             dfid = data.deferred;
 
         if (call && handlers[dfid || call]) {
+
+			// deffered RPC function?
 			if (dfid) {
 				if (data.success) {
 					// connection established. expose session.
@@ -59,6 +62,8 @@ Syncshare.Service = function(host, options) {
 				}
 				delete handlers[dfid];
 			} else {
+
+				// regular call. call the registered callbacks.
 				handlers[call](data.data, data.type === 'broadcast');
 			}
         }
@@ -66,7 +71,7 @@ Syncshare.Service = function(host, options) {
 
     frame = document.createElement('iframe');
     frame.width = frame.height = '0';
-    frame.src = this.host + '?token='+this.token+'&timeout='+this.timeout;
+    frame.src = this.host + '?token='+this.token+'&timeout='+this.timeout+'&transport='+this.transport;
 
     document.body.appendChild(frame);
 	
@@ -76,12 +81,12 @@ Syncshare.Service = function(host, options) {
     return deferred;
 };
 
-Syncshare.Rpc = function(service) {
-	for (var deferred,len,fn,i=0,n=service.remotes.length; i<n; i++) {        
-		fn = service.remotes[i];        
+Syncshare.Rpc = function(session) {
+	for (var deferred,fn,i=0,n=session.remotes.length; i<n; i++) {        
+		fn = session.remotes[i];        
 		this[fn] = function() {
 			deferred = new Syncshare.Deferred();
-			service.call(fn, Array.prototype.slice.call(arguments), deferred);
+			session.call(fn, Array.prototype.slice.call(arguments), deferred);
 			return deferred;
 		};
 	};

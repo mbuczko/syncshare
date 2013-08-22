@@ -16,19 +16,23 @@ init({tcp, http}, _Req, _Opts) ->
     {upgrade, protocol, cowboy_websocket}.
 
 websocket_init(_TransportName, Req, Opts) ->
-    Channel =  proplists:get_value(channel, Opts),
+    Channel = proplists:get_value(channel, Opts),
     {Service, _} = cowboy_req:binding(service, Req),
+    {Cookie, _}  = cowboy_req:cookie(<< ?COOKIE_NAME >>, Req),
 
+    % decode cookie
+    {ok, {_, Token}} = termit:decode_base64(Cookie, ?COOKIE_SECRET),
+
+	% create queue with initial name
     {ok, Queue} = syncshare_amqp:init_queue(<<>>, Channel, Service, 0),
 
-    lager:info("Initializing WEBSOCKET connection to service: '~s' with queue=~p~n", [Service, Queue]),
+    lager:info("Initializing WEBSOCKETS: service=~s with queue=~p and token~p~n", [Service, Queue, Token]),
 
     syncshare_amqp:listen(Channel, Queue),
-	{ok, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}}.
+	{ok, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}}.
 
-websocket_handle({text, Msg}, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}=State) ->
-    [Fn|Body] = re:split(Msg, "\\|", [{return, binary}, {parts, 3}]),
-    [Token|Data] = Body,
+websocket_handle({text, Msg}, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}=State) ->
+    [Fn|Data] = re:split(Msg, " ", [{return, binary}, {parts, 2}]),
 
     syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Fn, token=Token, data=list_to_binary(Data)}),
 	{ok, Req, State};
@@ -54,14 +58,14 @@ websocket_info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_c
     % acknowledge incoming message
     syncshare_amqp:ack(Channel, Tag),
 
-    lager:info("got response with headers...~p ~p",[Id, Headers]),
-
     % get type of message (message / broadcast) and called function name
     {ok, Type} = get_header(<<"type">>, Headers, <<"broadcast">>),
+
+	% get back called function name (stored in correlation id)
     [Call|_] = string:tokens(binary_to_list(Id), "-"),
 
-    lager:info("basic.deliver (~s|~s)~n", [Call, Type]),
-    {reply, {text, [Call, "|", Type, "|", Payload]}, Req, State};
+    lager:info("basic.deliver (~s/~s)~n", [Call, Type]),
+    {reply, {text, [Call, " ", Type, " ", Payload]}, Req, State};
 
 websocket_info(_Info, Req, State) ->
 	{ok, Req, State}.
