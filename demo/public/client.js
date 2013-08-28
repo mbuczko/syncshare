@@ -24,6 +24,8 @@ Syncshare.Service = function(host, options) {
         call: function(fn, params, deferred) {
             var dfid = deferred ? deferred.id() : null;
 
+			console.log('CALL', dfid ? 'RPC fn='+fn+' (id='+dfid+')' : fn);
+
             if (dfid != null) {
                 handlers[dfid] = deferred;
             }
@@ -82,18 +84,22 @@ Syncshare.Service = function(host, options) {
 };
 
 Syncshare.Rpc = function(session) {
-	for (var deferred,fn,i=0,n=session.remotes.length; i<n; i++) {        
-		fn = session.remotes[i];        
-		this[fn] = function() {
-			deferred = new Syncshare.Deferred();
-			session.call(fn, Array.prototype.slice.call(arguments), deferred);
-			return deferred;
-		};
+	for (var deferred,call,i=0,n=session.remotes.length; i<n; i++) {
+		call = session.remotes[i];
+
+		this[call] = function(fn) {
+			return function() {
+				deferred = new Syncshare.Deferred();
+				session.call(fn, Array.prototype.slice.call(arguments), deferred);
+				return deferred;
+			};
+		}(call);
 	};
 };
 
 Syncshare.Deferred = function() {
-    var dfid, result, callbacks = {
+    var dfid = new Date().getTime()+Math.floor((Math.random()*1000)),
+	    result, callbacks = {
         resolved : [],
         rejected : []
     };
@@ -108,9 +114,6 @@ Syncshare.Deferred = function() {
         result = res;
         return true;
     };
-
-	// generate unique identifier
-	dfid = new Date().getTime();
 
     return {
         id: function() { return dfid; },

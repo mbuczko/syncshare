@@ -24,7 +24,7 @@ handle(Req, {amqp_channel, Channel}=State) ->
 
 	lager:info("XHR with token=~p and queue=~p", [Token, Queue]),
 
-    syncshare_amqp:call(Channel, QName, #payload{service=Service, call=Call, data=Payload, token=Token}),
+    syncshare_amqp:call(Channel, Queue, #payload{service=Service, call=Call, data=Payload, token=Token}),
 
     {ok, Req3} = cowboy_req:reply(200, [], <<"ok">>, Req2),
     {ok, Req3, State}.

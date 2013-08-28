@@ -8,6 +8,6 @@ Syncshare::Module.register(:host => 'localhost', :service => 'twitter') do
 
   message :upload do |msg, header|
     puts "got token -> #{msg[:token]} and data -> #{msg[:data]}"
-    broadcast({:status => "ok|true", :url => "http://onet.pl"}, header)
+    broadcast({:status => "ok true", :url => "http://onet.pl"}, header)
   end
 end
