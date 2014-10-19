@@ -16,7 +16,7 @@ handle(Req, State) ->
     {Token, _} = cowboy_req:qs_val(<<"token">>, Req, ""),
 	{Trans, _} = cowboy_req:qs_val(<<"transport">>, Req, ""),
 
-    lager:info("Rendering for service ~p~n", [Service]),
+    lager:info("Rendering IFRAME for service ~p~n", [Service]),
 
     {ok, HTML} = frame_dtl:render([{service, Service}, {transport, Trans}]),
 

@@ -7,7 +7,7 @@
 -export([websocket_info/3]).
 -export([websocket_terminate/3]).
 
--import(syncshare_utils, [get_header/3]).
+-import(syncshare_utils, [get_header/3, memoize/3]).
 
 -include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
@@ -17,6 +17,7 @@ init({tcp, http}, _Req, _Opts) ->
 
 websocket_init(_TransportName, Req, Opts) ->
     Channel = proplists:get_value(channel, Opts),
+
     {Service, _} = cowboy_req:binding(service, Req),
     {Cookie, _}  = cowboy_req:cookie(<< ?COOKIE_NAME >>, Req),
 
@@ -26,9 +27,10 @@ websocket_init(_TransportName, Req, Opts) ->
 	% create queue with initial name
     {ok, Queue} = syncshare_amqp:init_queue(<<>>, Channel, Service, 0),
 
-    lager:info("Initializing WEBSOCKETS: service=~s with queue=~p and token~p~n", [Service, Queue, Token]),
-
+    % and start listening...
     syncshare_amqp:listen(Channel, Queue),
+
+    lager:info("Initializing WEBSOCKETS: service=~s with queue=~p and token~p~n", [Service, Queue, Token]),
 	{ok, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}}.
 
 websocket_handle({text, Msg}, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}=State) ->
@@ -40,7 +42,11 @@ websocket_handle({text, Msg}, Req, #state{service=Service, token=Token, amqp_cha
 websocket_handle(_Data, Req, State) ->
 	{ok, Req, State}.
 
-websocket_info(#'basic.consume_ok'{consumer_tag=Tag}, Req, State) ->
+websocket_info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}=State) ->
+
+	% if token was given, let's push authorization request
+	%% syncshare_amqp:authorize(Channel, Queue, Service, Token),
+
     lager:info("basic.consume ~p~n", [Tag]),
 	{ok, Req, State#state{consumer_tag=Tag}};
 
@@ -65,7 +71,7 @@ websocket_info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_c
     [Call|_] = string:tokens(binary_to_list(Id), "-"),
 
     lager:info("basic.deliver (~s/~s)~n", [Call, Type]),
-    {reply, {text, [Call, " ", Type, " ", Payload]}, Req, State};
+    {reply, {text, [Call, " ", Type, " ", Payload]}, Req, memoize(Call, State, Payload)};
 
 websocket_info(_Info, Req, State) ->
 	{ok, Req, State}.

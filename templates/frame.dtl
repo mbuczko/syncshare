@@ -56,12 +56,13 @@ Syncshare = (function(service, proto) {
 
 		if (dfid) {
 			if (fn === '_connect') {
-				if ("WebSocket" in window && (proto === 'auto' || proto === 'websockets')) {
+				if ('WebSocket' in window && (proto === 'auto' || proto === 'websockets')) {
 
-					console.log('going with WEBSOCKETS', service);
+					console.log('going with WEBSOCKETS service=', service);
 
 					channel = new WebSocket("ws://" + 'localhost:8080/syncshare/wbs/' + service);
 					channel.onopen = function() {
+						console.log('connection opened'); 
 						reply(fn, null, Object.keys(remotes), dfid, true);
 					};
 					channel.onmessage = function(ev) {

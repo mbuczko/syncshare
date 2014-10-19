@@ -2,6 +2,7 @@
 -record(state, {
           service      :: binary(),
 		  token        :: binary(),
+		  belongs      :: binary(),
           consumer_tag :: any(),
           delivery_tag :: any(),
           amqp_channel :: any(),
@@ -13,10 +14,6 @@
           call     :: string(),
           data     :: string(),
           token    :: string()}).
-
--record(cached, {
-          service  :: binary(),
-          messages :: binary()}).
 
 %% How many broadcast responses to cache
 -define(KEEP_MSGS, 10).

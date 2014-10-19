@@ -6,6 +6,6 @@ Syncshare.remote({
         this.success({ok: true});
     },
     observe: function(arg1, arg2) {
-        this.success({upsala: true});
+        this.fail({upsala: true});
     }
 });

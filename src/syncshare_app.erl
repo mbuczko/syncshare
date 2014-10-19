@@ -25,11 +25,7 @@ start(_Type, _Args) ->
 			{"/syncshare/sse/:service", sse_handler, [{channel, Channel}]},
 			{"/syncshare/sse/:service/:call", xhr_handler, [{channel, Channel}]},
 			{"/syncshare/wbs/:service", wbs_handler, [{channel, Channel}]},
-
-            {"/syncshare/providers/[...]", cowboy_static, [
-                                                           {directory, {priv_dir, syncshare, []}},
-                                                           {mimetypes, {fun mimetypes:path_to_mimes/2, default}}
-                                                          ]}
+            {"/syncshare/providers/[...]", cowboy_static, {dir, "providers", [{mimetypes, cow_mimetypes, all}]}}
 		]}
 	]),
 	{ok, _} = cowboy:start_http(http, 100, [{port, 8080}], [

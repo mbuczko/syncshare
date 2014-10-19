@@ -10,27 +10,33 @@ Syncshare.Client = function(host, options) {
 };
 
 Syncshare.Service = function(host, options) {
-    var self = this, handlers = {}, frame, rpc, deferred = new Syncshare.Deferred();
+    var self = this, handlers = {}, frame, rpc, promise = new Syncshare.Deferred();
 
     this.host = host;
 	this.transport = options.transport || 'wbs';
     this.timeout = options.timeout || 60000;
-    this.token = options.token || "";
 	this.session = {
         on: function(fn, callback) {
-            handlers[fn] = callback;
+			if (!handlers[fn]) {
+				handlers[fn] = callback;
+			}
             return this;
         },
         call: function(fn, params, deferred) {
             var dfid = deferred ? deferred.id() : null;
 
-			console.log('CALL', dfid ? 'RPC fn='+fn+' (id='+dfid+')' : fn);
+			if (fn) {
+				console.log('CALL', dfid ? 'RPC '+fn+' (id='+dfid+')' : fn);
 
-            if (dfid != null) {
-                handlers[dfid] = deferred;
-            }
-            frame.contentWindow.postMessage({call: fn, data: params, deferred: dfid}, '*');
-            return this;
+				if (dfid != null) {
+					handlers[dfid] = deferred;
+				}
+				frame.contentWindow.postMessage({call: fn, data: params, deferred: dfid}, '*');
+				return this;				
+			}
+
+			this.callFn = null;
+			return false;
         },
         rpc: function(callback) {
             rpc = rpc || new Syncshare.Rpc(this);
@@ -47,40 +53,59 @@ Syncshare.Service = function(host, options) {
 
         if (call && handlers[dfid || call]) {
 
-			// deffered RPC function?
+			// deferred RPC function?
 			if (dfid) {
 				if (data.success) {
-					// connection established. expose session.
 					if (call === '_connect') {
-						console.log('Connection established => remotes', data.data);
+						console.log('RPC initialized', data.data);
 
 						session.remotes = data.data;
-						deferred.resolve(session);
-					} else {
-						handlers[dfid].resolve(data.data);
-					}
-				} else {
-					handlers[dfid].reject(data.data);
-				}
-				delete handlers[dfid];
-			} else {
 
-				// regular call. call the registered callbacks.
-				handlers[call](data.data, data.type === 'broadcast');
-			}
+						// do not resolve deferred object if authentication was forced
+						// 'authenticate' callback should take care of this
+
+						if (!options.auth) {
+							promise.resolve(session);
+						}
+
+					} 
+					else { handlers[dfid].resolve(data.data); }
+				} 
+				else { handlers[dfid].reject(data.data); }
+				delete handlers[dfid];
+			} 
+			else { handlers[call](data.data, data.type === 'broadcast'); }
         }
     }, false);
 
     frame = document.createElement('iframe');
     frame.width = frame.height = '0';
-    frame.src = this.host + '?token='+this.token+'&timeout='+this.timeout+'&transport='+this.transport;
+    frame.src = this.host + '?timeout='+this.timeout+'&transport='+this.transport;
 
     document.body.appendChild(frame);
 	
 	frame.onload = function() {
-		session.call('_connect', null, deferred);
+		session.on('authenticate', function(auth) {
+			console.log('Authenticated', auth);
+
+			if (auth || auth === undefined) {
+
+				console.log('Session authenticated', this.authenticated);
+
+				// session could be already authenticated. in this case it's better not 
+				// to resolve promise as the promise success-handler may add some bindings again
+
+				if (!this.authenticated) {
+					this.authenticated = true;
+					promise.resolve(session);
+				}
+			} else {
+				this.authenticated = false;
+				console.warn('Authentication failed or session expired.', auth);
+			}
+		}).call('_connect', null, promise);
 	};
-    return deferred;
+    return promise;
 };
 
 Syncshare.Rpc = function(session) {

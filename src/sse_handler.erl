@@ -4,7 +4,7 @@
 -export([init/3, info/3]).
 -export([terminate/3]).
 
--import(syncshare_utils, [cookie_string/3, get_header/3]).
+-import(syncshare_utils, [cookie_string/3, get_header/3, memoize/3]).
 
 -include_lib("include/syncshare.hrl").
 -include_lib("amqp_client/include/amqp_client.hrl").
@@ -27,10 +27,9 @@ init({tcp, http}, Req, Opts) ->
     syncshare_amqp:listen(Channel, Queue),
 
     lager:info("Initializing SERVER SIDE EVENTS: service=~s with queue=~p and token=~p", [Service, Queue, Token]),
-
     {loop, Req2, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}, Timeout, hibernate}.
 
-info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=Token, amqp_queue=Queue}=State) ->
+info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}=State) ->
     [Socket, Transport] = cowboy_req:get([socket, transport], Req),
 	{Version, _} = cowboy_req:version(Req),
 
@@ -45,6 +44,9 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=T
 
     Event = ["event: connection\ndata: ", << Queue/binary >>, "\n\n"],
     Transport:send(Socket, [Status, Type, Cookie, <<"\r\n">>, Event]),
+
+	% if token was given, let's push authorization request
+	syncshare_amqp:authorize(Channel, Queue, Service, Token),
 
 	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
 
@@ -66,7 +68,7 @@ info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Cha
     Transport:send(Socket, Event),
 
     lager:info("basic.deliver (~s/~s)~n", [Call, Type]),
-    {loop, Req, State, hibernate};
+    {loop, Req, memoize(Call, State, Payload), hibernate};
 
 info(#'basic.cancel_ok'{}, Req, State) ->
     lager:info("basic.cancel_ok...~n"),
