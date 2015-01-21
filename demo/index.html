@@ -1,16 +1,13 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
   <head>
     <title>Syncshare test</title>
-    <script type="text/javascript" src="client.js"></script>
+    <script type="text/javascript" src="js/client.js"></script>
   </head>
   <body>
-    Welcome on the board <em> <%= current_user['name'] %> </em>
+    Welcome on the board
   </body>
 
   <script type="text/javascript">
-
-    // "<%= current_user['name'] %>"
-
     var client = new Syncshare.Client('http://localhost:8080/syncshare/twitter', {transport: 'websockets'}).connect(function(session) {
         session
 			.on('upload', function(data, isBroadcast) {
@@ -24,12 +21,10 @@
             session.call('observe', { abc: 1 });
     
             // RPC call
-            //var rpc = session.rpc();
-			//rpc.upload({abc: 2}, 'dupa').then(function(success) { console.log('SUCCESS', success); }, function(error) { console.log('ERROR', error); });
-			//rpc.observe({abc: 2}, 'dupa').then(function(success) { console.log('SUCCESS', success); }, function(error) { console.log('ERROR', error); });
+            var rpc = session.rpc();
+			rpc.upload({abc: 2}, 'dupa').then(function(success) { console.log('SUCCESS', success); }, function(error) { console.log('ERROR', error); });
+			rpc.observe({abc: 2}, 'dupa').then(function(success) { console.log('SUCCESS', success); }, function(error) { console.log('ERROR', error); });
 
     });
-
-
   </script>
 </html>
