@@ -3,7 +3,7 @@
 
 %% API.
 -export([init/0]).
--export([init_queue/4, declare_exchanges/2, declare_exchange/3, ack/2, call/3, authorize/4]).
+-export([init_queue/4, declare_exchanges/2, declare_exchange/3, ack/2, call/3]).
 -export([cancel_subscription/2, delete_queue/2]).
 -export([listen/2, terminate/2]).
 
@@ -69,12 +69,6 @@ call(Channel, Queue, #payload{service=Service, call=Call, data=Data, token=Token
 
 ack(Channel, Tag) ->
     amqp_channel:cast(Channel, #'basic.ack'{delivery_tag = Tag}).
-
-authorize(_, _, _, <<>>) ->
-	{ok, 0};
-
-authorize(Channel, Queue, Service, Token) ->
-	call(Channel, Queue, #payload{service=Service, call= <<"authorize">>, data= <<>>, token=Token}).
 
 cancel_subscription(Channel, Tag) ->
     amqp_channel:call(Channel, #'basic.cancel'{consumer_tag = Tag}).

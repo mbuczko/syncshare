@@ -43,10 +43,6 @@ websocket_handle(_Data, Req, State) ->
 	{ok, Req, State}.
 
 websocket_info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}=State) ->
-
-	% if token was given, let's push authorization request
-	%% syncshare_amqp:authorize(Channel, Queue, Service, Token),
-
     lager:info("basic.consume ~p~n", [Tag]),
 	{ok, Req, State#state{consumer_tag=Tag}};
 

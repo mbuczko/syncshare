@@ -2,3 +2,6 @@ log
 ebin
 deps
 .rebar
+.projectile
+TAGS
+*.graffle

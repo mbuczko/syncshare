@@ -45,9 +45,6 @@ info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=T
     Event = ["event: connection\ndata: ", << Queue/binary >>, "\n\n"],
     Transport:send(Socket, [Status, Type, Cookie, <<"\r\n">>, Event]),
 
-	% if token was given, let's push authorization request
-	syncshare_amqp:authorize(Channel, Queue, Service, Token),
-
 	{loop, Req, State#state{consumer_tag=Tag}, hibernate};
 
 info({#'basic.deliver'{delivery_tag=Tag}, Content}, Req, #state{amqp_channel=Channel}=State) ->
