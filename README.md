@@ -1,6 +1,6 @@
 # Syncshare - RabbitMQ based instant notification system
 
-This is a concept of bridge between http clients and the backend workers basing on pubsub (rabbitMQ in this case) and cowboy server holding all WebSocket- and Server Sent Events connections alive. Having connection established, the client side (browser) is able to send asynchronous request or synchronous RPC command which will be processed by one of assigned worker processes. 
+This is a concept of bridge between http clients and the backend workers basing on pubsub (rabbitMQ in this case) and cowboy server holding all WebSocket- and Server Sent Events connections alive. Having connection established, the client side (browser) is able to send asynchronous RPC commands which will be processed by one of assigned worker processes. 
 
 Response may be sent back to origin or to all clients (browsers) connected to given service. You may imagine this kind of response as broadcast one.
 
