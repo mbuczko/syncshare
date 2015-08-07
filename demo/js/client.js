@@ -34,13 +34,10 @@ Syncshare.Service = function(host, options) {
 				frame.contentWindow.postMessage({call: fn, data: params, deferred: dfid}, '*');
 				return this;				
 			}
-
-			this.callFn = null;
-			return false;
+			return this.callFn = null;
         },
         rpc: function(callback) {
-            rpc = rpc || new Syncshare.Rpc(this);
-            return rpc;
+            return (rpc = rpc || new Syncshare.Rpc(this));
         }
 	};
 
@@ -60,14 +57,7 @@ Syncshare.Service = function(host, options) {
 						console.log('RPC initialized', data.data);
 
 						session.remotes = data.data;
-
-						// do not resolve deferred object if authentication was forced
-						// 'authenticate' callback should take care of this
-
-						if (!options.auth) {
-							promise.resolve(session);
-						}
-
+						promise.resolve(session);
 					} 
 					else { handlers[dfid].resolve(data.data); }
 				} 
@@ -85,25 +75,7 @@ Syncshare.Service = function(host, options) {
     document.body.appendChild(frame);
 	
 	frame.onload = function() {
-		session.on('authenticate', function(auth) {
-			console.log('Authenticated', auth);
-
-			if (auth || auth === undefined) {
-
-				console.log('Session authenticated', this.authenticated);
-
-				// session could be already authenticated. in this case it's better not 
-				// to resolve promise as the promise success-handler may add some bindings again
-
-				if (!this.authenticated) {
-					this.authenticated = true;
-					promise.resolve(session);
-				}
-			} else {
-				this.authenticated = false;
-				console.warn('Authentication failed or session expired.', auth);
-			}
-		}).call('_connect', null, promise);
+		session.call('_connect', null, promise);
 	};
     return promise;
 };

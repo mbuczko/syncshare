@@ -42,7 +42,7 @@ websocket_handle({text, Msg}, Req, #state{service=Service, token=Token, amqp_cha
 websocket_handle(_Data, Req, State) ->
 	{ok, Req, State}.
 
-websocket_info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, token=Token, amqp_channel=Channel, amqp_queue=Queue}=State) ->
+websocket_info(#'basic.consume_ok'{consumer_tag=Tag}, Req, #state{service=Service, amqp_channel=Channel, amqp_queue=Queue}=State) ->
     lager:info("basic.consume ~p~n", [Tag]),
 	{ok, Req, State#state{consumer_tag=Tag}};
 
